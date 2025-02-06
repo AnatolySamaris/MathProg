@@ -7,6 +7,7 @@ from PyQt5.QtGui import QIntValidator, QDoubleValidator
 from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtCore import QRegExp
 from PyQt5.QtWidgets import QItemDelegate, QStyledItemDelegate
+from IPython.display import display, HTML
 
 class DoubleValidatorDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
@@ -252,12 +253,12 @@ class MainScreen(QMainWindow):
         """
         selected_method = methods.currentText()
 
-        if selected_method == "Метод 1":
-            headers = ["Параметр A", "Параметр B", "Параметр C"]
+        if selected_method == "Метод Монте-Карло":
+            headers = ["N"]
             self.set_table_parameters(table, headers)
 
-        elif selected_method == "Метод 2":
-            headers = ["Результат X", "Результат Y"]
+        elif selected_method == "Метод имитации отжига":
+            headers = ["Tₘₐₓ", "L", "r", "ε"]
             self.set_table_parameters(table, headers)
 
         else:
