@@ -338,7 +338,7 @@ class MainScreen(QMainWindow):
             headers = ["Item 1", "Item 2", "Item 3", "Item 4"]
             self.set_table_parameters(table, headers)
     
-    def reset_output(self):
+    def reset_output(self): # TODO : ДОБАВИТЬ ОЧИСТКУ/УДАЛЕНИЕ ГРАФИКА 
         self.result_time_label.hide()
         self.result_value_label.hide()
         self.result_point_label.hide()
@@ -347,11 +347,22 @@ class MainScreen(QMainWindow):
     def calculation(self):
         self.reset_output()
 
+        # Рисуем красиво введенную функцию
+        # TODO : рисование функции
+
+        # Инициализация метода
+        # TODO : инициализация метода 
+
+        # Расчет
+        # TODO : расчет
+
+        # Получаем результаты
         time = 123
         min_value = -176.23
         min_point = [-2.5, 24, 0]
         vars = ['x1', 'x2', 'x3']
 
+        # Вывод результатов
         self.result_time_label.setText(f"<b>Время работы алгоритма:</b> {time} сек")
         self.result_time_label.show()
         self.result_value_label.setText(f"<b>Минимум функции f(x*):</b> {min_value}")
