@@ -14,6 +14,11 @@ from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtCore import QRegExp
 from PyQt5.QtWidgets import QItemDelegate, QStyledItemDelegate
 
+from backend.Function import Function
+from backend.Optimizator import Optimizator
+
+from time import time
+
 class DoubleValidatorDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -31,6 +36,7 @@ class DoubleValidatorDelegate(QStyledItemDelegate):
 class MainScreen(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.optimizer = Optimizator()
 
         self.title = "Учебно-исследовательский проект"
         self.width = 1200
@@ -102,8 +108,8 @@ class MainScreen(QMainWindow):
         constraint_input_layout.addWidget(self.upper_bound_input)
         top_left_layout.addLayout(constraint_input_layout)
 
-        # строка "Сообщение об ошибке" красным цветом
-        self.error_message_label = QLabel("Сообщение об ошибке")
+        # сообщение об ошибке красным цветом
+        self.error_message_label = QLabel()
         self.error_message_label.setFont(font)
         palette = QPalette()
         palette.setColor(QPalette.WindowText, QColor("red"))
@@ -154,9 +160,8 @@ class MainScreen(QMainWindow):
 
         # выпадающий список для локальных методов
         self.loc_methods = QComboBox()
-        self.loc_methods.addItem("Метод 1")
-        self.loc_methods.addItem("Метод 2")
-        self.loc_methods.addItem("Метод 3")
+        self.loc_methods.addItem("Метод Нелдера-Мида")
+        self.loc_methods.addItem("Метод Пауэлла")
         self.loc_methods.setFixedHeight(40)
         self.loc_methods.setFont(font)
         bottom_left_layout.addWidget(self.loc_methods)
@@ -235,7 +240,6 @@ class MainScreen(QMainWindow):
         results_layout.addWidget(self.result_value_label)
         
         self.result_point_label = QLabel()
-        self.result_point_label.setText("<b>Минимум достигается в точке:</b>")
         self.result_point_label.setStyleSheet("font-size: 18px;")
         self.result_point_label.hide()
         results_layout.addWidget(self.result_point_label)
@@ -326,49 +330,134 @@ class MainScreen(QMainWindow):
         """
         selected_method = methods.currentText()
 
-        if selected_method == "Метод 1":
-            headers = ["Параметр A", "Параметр B", "Параметр C"]
+        if selected_method == "Метод Монте-Карло":
+            headers = ["N"]
             self.set_table_parameters(table, headers)
 
-        elif selected_method == "Метод 2":
-            headers = ["Результат X", "Результат Y"]
+        elif selected_method == "Метод имитации отжига":
+            headers = ["Tₘₐₓ", "L", "r", "ε"]
             self.set_table_parameters(table, headers)
 
-        else:
-            headers = ["Item 1", "Item 2", "Item 3", "Item 4"]
+        elif selected_method == "Метод Нелдера-Мида" or selected_method == "Метод Пауэлла":
+            headers = ["N", "ε"]
             self.set_table_parameters(table, headers)
     
-    def reset_output(self): # TODO : ДОБАВИТЬ ОЧИСТКУ/УДАЛЕНИЕ ГРАФИКА 
+    def reset_output(self): # TODO : ДОБАВИТЬ ОЧИСТКУ/УДАЛЕНИЕ ГРАФИКА
+        self.result_time_label.setText("")
         self.result_time_label.hide()
+
+        self.result_value_label.setText("")
         self.result_value_label.hide()
+
+        self.result_point_label.setText("")
         self.result_point_label.hide()
+
+        self.result_point.setText("")
         self.result_point.hide()
+
+        self.error_message_label.setText("")
+
+    def validate_inputs(self) -> bool:  # TODO : РЕАЛИЗОВАТЬ ВАЛИДАЦИЮ ВВОДА ВСЕГО ЧТО ЕСТЬ
+        if len(self.function_input.text().strip()) == 0:
+            self.error_message_label.setText("Функция не введена!")
+            return False
+        if len(self.lower_bound_input.text().strip()) == 0:
+            self.error_message_label.setText("Нижняя граница xi не введена!")
+            return False
+        if len(self.upper_bound_input.text().strip()) == 0:
+            self.error_message_label.setText("Верхняя граница xi не введена!")
+            return False
+        return True
 
     def calculation(self):
         self.reset_output()
+        
+        if not self.validate_inputs():
+            return
+
+        # Парсим введенную функцию
+        try:
+            func = Function(self.function_input.text())
+            n_vars = func.count_vars()
+        except Exception:
+            self.error_message_label.setText("Ошибка при считывании функции!")
+            return
+        
+        # Получаем ограничения по xi
+        lower_x = float(self.lower_bound_input.text().strip())
+        upper_x = float(self.upper_bound_input.text().strip())
+
+        # Получаем инициализирующие переменные из таблицы глобальной оптимизации
+        match self.glob_methods.currentText():
+            case "Метод Монте-Карло":
+                N = int(self.glob_table.item(1, 0))  # N
+            case "Метод имитации отжига":
+                Tmax = float(self.glob_table.item(1, 0))  # Tmax
+                L = int(self.glob_table.item(1, 1))  # L
+                r = float(self.glob_table.item(1, 2))  # r
+                eps = float(self.glob_table.item(1, 3))    # eps
+            case _:
+                return
+
+        # Получаем инициализирующие переменные из таблицы локальной оптимизации
+        match self.loc_methods.currentText():
+            case "Метод Нелдера-Мида":
+                N_loc = int(self.loc_table.item(1, 0))  # N
+                eps_loc = float(self.loc_table.item(1, 1)) # eps
+            case "Метод Пауэлла":
+                N_loc = int(self.loc_table.item(1, 0))  # N
+                eps_loc = float(self.loc_table.item(1, 1)) # eps
+            case _:
+                return
 
         # Рисуем красиво введенную функцию
         # TODO : рисование функции
 
-        # Инициализация метода
-        # TODO : инициализация метода 
-
         # Расчет
-        # TODO : расчет
+        time_start = time()
+        if self.glob_methods.currentText() == "Метод Монте-Карло":
+            if self.loc_methods.currentText() == "Метод Нелдера-Мида":
+                min_point, global_history, local_history = Optimizator.monte_karlo(
+                    func, n_vars, lower_x, upper_x, N, Optimizator.nelder_mead,
+                    eps_loc, N_loc
+                )
+            elif self.loc_methods.currentText() == "Метод Пауэлла":
+                min_point, global_history, local_history = Optimizator.monte_karlo(
+                    func, n_vars, lower_x, upper_x, N, Optimizator.powell,
+                    eps_loc, N_loc
+                )
+            else:
+                return
+        elif self.glob_methods.currentText() == "Метод имитации отжига":
+            if self.loc_methods.currentText() == "Метод Нелдера-Мида":
+                min_point, global_history, local_history = Optimizator.annealing_imitation(
+                    func, n_vars, lower_x, upper_x, Tmax, L, r, eps, Optimizator.nelder_mead,
+                    eps_loc, N_loc
+                )
+            elif self.loc_methods.currentText() == "Метод Пауэлла":
+                min_point, global_history, local_history = Optimizator.annealing_imitation(
+                    func, n_vars, lower_x, upper_x, Tmax, L, r, eps, Optimizator.powell,
+                    eps_loc, N_loc
+                )
+            else:
+                return
 
         # Получаем результаты
-        time = 123
-        min_value = -176.23
-        min_point = [-2.5, 24, 0]
-        vars = ['x1', 'x2', 'x3']
+        time_end = time() - time_start 
+        min_value = func(min_point)
+        vars = func.get_vars()
 
         # Вывод результатов
-        self.result_time_label.setText(f"<b>Время работы алгоритма:</b> {time} сек")
+        self.result_time_label.setText(f"<b>Время работы алгоритма:</b> {round(time_end, 4)} сек")
         self.result_time_label.show()
-        self.result_value_label.setText(f"<b>Минимум функции f(x*):</b> {min_value}")
+        self.result_value_label.setText(f"<b>Минимум функции f(x*):</b> {round(min_value, 6)}")
         self.result_value_label.show()
-        self.result_point.setText(f"({'; '.join(vars)}) = ({'; '.join(map(str, min_point))})")
+        self.result_point_label.setText("<b>Минимум достигается в точке:</b>")
         self.result_point_label.show()
+        self.result_point.setText(f"({'; '.join(vars)}) = ({'; '.join(map(lambda x: str(round(x, 6)), min_point))})")
         self.result_point.show()
+
+        # Рисуем график
+        # TODO : РИСОВАНИЕ ГРАФИКА
 
     
