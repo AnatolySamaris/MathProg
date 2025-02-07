@@ -1,4 +1,10 @@
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QDesktopWidget, QFrame, QLineEdit, QComboBox, QTableWidget, QTableWidgetItem, QSizePolicy, QHeaderView
+from PyQt5.QtWidgets import (
+    QApplication, QMainWindow, QWidget, 
+    QVBoxLayout, QHBoxLayout, QLabel, 
+    QDesktopWidget, QFrame, QLineEdit, 
+    QComboBox, QTableWidget, QTableWidgetItem, 
+    QSizePolicy, QHeaderView, QPushButton
+)
 from PyQt5.QtGui import QPalette, QColor
 from PyQt5.QtCore import Qt
 from functools import partial
@@ -172,6 +178,26 @@ class MainScreen(QMainWindow):
             partial(self.update_table, self.loc_methods, self.loc_table)
         )
 
+        self.button_calculate = QPushButton()
+        self.button_calculate.setText("Расчитать")
+        self.button_calculate.setMinimumHeight(32)
+        self.button_calculate.setStyleSheet("""
+            QPushButton {
+                border: 1px solid black;
+                background-color: white;
+                font-size: 18px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: lightgray;
+            }
+            QPushButton:pressed {
+                background-color: darkgray;
+            }
+        """)
+        self.button_calculate.clicked.connect(self.calculation)
+        bottom_left_layout.addWidget(self.button_calculate)
+
         # добавляем нижнюю часть в левую часть
         left_layout.addWidget(bottom_left_widget, stretch=65)
 
@@ -263,3 +289,8 @@ class MainScreen(QMainWindow):
         else:
             headers = ["Item 1", "Item 2", "Item 3", "Item 4"]
             self.set_table_parameters(table, headers)
+
+    def calculation(self):
+        self.error_message_label.setText("CLICKED")
+
+    
