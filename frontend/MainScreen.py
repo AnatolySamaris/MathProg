@@ -209,12 +209,57 @@ class MainScreen(QMainWindow):
         main_separator.setFrameShape(QFrame.VLine)  # Вертикальная линия
         main_layout.addWidget(main_separator)
 
-        # правая часть
+
+
+        # правая сторона
         right_widget = QWidget()
         right_layout = QVBoxLayout(right_widget)
 
-        # верхняя часть правой части
+        # верхняя часть правой стороны
         top_right_widget = QWidget()
+        top_right_layout = QVBoxLayout(top_right_widget)
+
+        # Виджет результатов
+        results_widget = QWidget()
+        results_layout = QVBoxLayout(results_widget)
+
+        # Результаты
+        self.result_time_label = QLabel()
+        self.result_time_label.setStyleSheet("font-size: 18px;")
+        self.result_time_label.hide()
+        results_layout.addWidget(self.result_time_label)
+
+        self.result_value_label = QLabel()
+        self.result_value_label.setStyleSheet("font-size: 18px;")
+        self.result_value_label.hide()
+        results_layout.addWidget(self.result_value_label)
+        
+        self.result_point_label = QLabel()
+        self.result_point_label.setText("<b>Минимум достигается в точке:</b>")
+        self.result_point_label.setStyleSheet("font-size: 18px;")
+        self.result_point_label.hide()
+        results_layout.addWidget(self.result_point_label)
+
+        self.result_point = QLabel()
+        self.result_point.setText("")
+        self.result_point.setStyleSheet("font-size: 18px;")
+        self.result_point.hide()
+        results_layout.addWidget(self.result_point)
+        
+        # Добавляем вертикальный отступ чтобы прижать все элементы к верху
+        results_layout.addStretch()
+
+        # Добавляем результаты в правую верхнюю часть
+        top_right_layout.addWidget(results_widget, stretch=65)
+
+        # Виджет красивого отображения формулы
+        formula_widget = QWidget()
+        formula_layout = QVBoxLayout()
+
+        # Добавляем красивое отображение формулы в правую верхнюю часть
+        top_right_layout.addWidget(formula_widget, stretch=35)
+
+        # Добавляем правую верхнюю часть в правую сторону
         right_layout.addWidget(top_right_widget, stretch=40)
 
         # разделитель между верхней и нижней частью правой стороны
@@ -222,11 +267,14 @@ class MainScreen(QMainWindow):
         right_separator1.setFrameShape(QFrame.HLine)  # Горизонтальная линия
         right_layout.addWidget(right_separator1)
 
-        # нижняя часть правой части
+        # нижняя часть правой стороны
         bottom_right_widget = QWidget()
+        bottom_right_layout = QVBoxLayout(bottom_right_widget)
+
+        # Добавляем правую нижнюю часть в правую сторону
         right_layout.addWidget(bottom_right_widget, stretch=60)
 
-        # добавляем правую часть в главный layout
+        # добавляем правую сторону в главный layout
         main_layout.addWidget(right_widget, stretch=50)
 
     def center(self) -> None:
@@ -289,8 +337,27 @@ class MainScreen(QMainWindow):
         else:
             headers = ["Item 1", "Item 2", "Item 3", "Item 4"]
             self.set_table_parameters(table, headers)
+    
+    def reset_output(self):
+        self.result_time_label.hide()
+        self.result_value_label.hide()
+        self.result_point_label.hide()
+        self.result_point.hide()
 
     def calculation(self):
-        self.error_message_label.setText("CLICKED")
+        self.reset_output()
+
+        time = 123
+        min_value = -176.23
+        min_point = [-2.5, 24, 0]
+        vars = ['x1', 'x2', 'x3']
+
+        self.result_time_label.setText(f"<b>Время работы алгоритма:</b> {time} сек")
+        self.result_time_label.show()
+        self.result_value_label.setText(f"<b>Минимум функции f(x*):</b> {min_value}")
+        self.result_value_label.show()
+        self.result_point.setText(f"({'; '.join(vars)}) = ({'; '.join(map(str, min_point))})")
+        self.result_point_label.show()
+        self.result_point.show()
 
     
