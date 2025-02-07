@@ -149,9 +149,8 @@ class MainScreen(QMainWindow):
 
         # выпадающий список для локальных методов
         self.loc_methods = QComboBox()
-        self.loc_methods.addItem("Метод 1")
-        self.loc_methods.addItem("Метод 2")
-        self.loc_methods.addItem("Метод 3")
+        self.loc_methods.addItem("Метод Нелдера-Мида")
+        self.loc_methods.addItem("Метод Пауэлла")
         self.loc_methods.setFixedHeight(40)
         self.loc_methods.setFont(font)
         bottom_left_layout.addWidget(self.loc_methods)
@@ -261,6 +260,6 @@ class MainScreen(QMainWindow):
             headers = ["Tₘₐₓ", "L", "r", "ε"]
             self.set_table_parameters(table, headers)
 
-        else:
-            headers = ["Item 1", "Item 2", "Item 3", "Item 4"]
+        elif selected_method == "Метод Нелдера-Мида" or selected_method == "Метод Пауэлла":
+            headers = ["N", "ε"]
             self.set_table_parameters(table, headers)
