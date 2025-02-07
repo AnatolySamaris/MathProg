@@ -7,7 +7,6 @@ from PyQt5.QtGui import QIntValidator, QDoubleValidator
 from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtCore import QRegExp
 from PyQt5.QtWidgets import QItemDelegate, QStyledItemDelegate
-from IPython.display import display, HTML
 
 class DoubleValidatorDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
