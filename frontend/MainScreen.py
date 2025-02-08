@@ -298,13 +298,6 @@ class MainScreen(QMainWindow):
         # убираем индексы строк
         table.verticalHeader().setVisible(False)
 
-        # растягиваем таблицу на всю высоту
-        table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
-
-        # настраиваем растяжение заголовков на всю ширину
-        header = table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.Stretch)
-
         # стили для заголовков
         table.setStyleSheet("""
             QHeaderView::section {
@@ -352,6 +345,12 @@ class MainScreen(QMainWindow):
         elif selected_method == "Градиентный спуск":
             headers = ["N", "ε", "h", "λ"]
             self.set_table_parameters(table, headers)
+
+        # выравнивание столбцов на всю ширину
+        header = table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.Stretch)
+        # растягиваем таблицу на всю высоту
+        table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
     
     def reset_output(self): # TODO : ДОБАВИТЬ ОЧИСТКУ/УДАЛЕНИЕ ГРАФИКА
         self.result_time_label.setText("")
