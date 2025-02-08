@@ -447,9 +447,6 @@ class MainScreen(QMainWindow):
             case _:
                 return
 
-        # Рисуем красиво введенную функцию
-        # TODO : рисование функции
-
         # Расчет
         time_start = time()
         if self.glob_methods.currentText() == "Метод Монте-Карло":
