@@ -1,6 +1,6 @@
 import re
 from typing import List
-from sympy import lambdify, sympify
+from sympy import lambdify, sympify, latex
 from latex2sympy2 import latex2sympy
 
 class Function:
@@ -11,6 +11,7 @@ class Function:
     result = func([1.0, 2.0])  # 0.84147 + 4 = 4.84147
     """
     def __init__(self, str_func: str):
+        self.to_beautify = ""
         self.expr, self.variables = self.__parse_func(str_func)
         self.compiled_func = self.__compile_func(self.expr, self.variables)
 
@@ -23,8 +24,12 @@ class Function:
     def get_vars(self):
         return list(map(lambda x: re.sub(r"[{}_]", "", str(x)), self.variables))
 
+    def get_latex_func(self):
+        return latex(self.to_beautify)
+
     def __parse_func(self, str_func: str):
         without_spaces = str_func.replace(" ", "")
+        self.to_beautify = latex2sympy(without_spaces)
         expanded = self.__expand_sums(without_spaces)
         simplified = self.__simplify_indexes(expanded)
         expr = latex2sympy(simplified)

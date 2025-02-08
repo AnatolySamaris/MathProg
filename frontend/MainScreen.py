@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QWidget, 
+    QMainWindow, QWidget, 
     QVBoxLayout, QHBoxLayout, QLabel, 
     QDesktopWidget, QFrame, QLineEdit, 
     QComboBox, QTableWidget, QTableWidgetItem, 
@@ -12,7 +12,10 @@ from PyQt5.QtGui import QFont
 from PyQt5.QtGui import QIntValidator, QDoubleValidator
 from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtCore import QRegExp
-from PyQt5.QtWidgets import QItemDelegate, QStyledItemDelegate
+from PyQt5.QtWidgets import QStyledItemDelegate
+
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
 
 from backend.Function import Function
 from backend.Optimizator import Optimizator
@@ -36,7 +39,6 @@ class DoubleValidatorDelegate(QStyledItemDelegate):
 class MainScreen(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.optimizer = Optimizator()
 
         self.title = "Учебно-исследовательский проект"
         self.width = 1200
@@ -64,6 +66,10 @@ class MainScreen(QMainWindow):
         # горизонтальный layout для разделения на левую и правую части
         main_layout = QHBoxLayout(central_widget)
 
+        # =========================================================================
+        # ЛЕВАЯ СТОРОНА
+        # =========================================================================
+
         # левая часть
         left_widget = QWidget()
         left_layout = QVBoxLayout(left_widget)
@@ -84,6 +90,7 @@ class MainScreen(QMainWindow):
         self.function_input = QLineEdit()
         self.function_input.setFont(font)
         self.function_input.setValidator(function_validator)
+        self.function_input.textChanged.connect(self.update_beautiful_function)
         function_input_layout.addWidget(fx_label)
         function_input_layout.addWidget(self.function_input)
         top_left_layout.addLayout(function_input_layout)
@@ -217,7 +224,9 @@ class MainScreen(QMainWindow):
         main_separator.setFrameShape(QFrame.VLine)  # Вертикальная линия
         main_layout.addWidget(main_separator)
 
-
+        # =========================================================================
+        # ПРАВАЯ СТОРОНА
+        # =========================================================================
 
         # правая сторона
         right_widget = QWidget()
@@ -226,6 +235,19 @@ class MainScreen(QMainWindow):
         # верхняя часть правой стороны
         top_right_widget = QWidget()
         top_right_layout = QVBoxLayout(top_right_widget)
+
+        # Виджет красивого отображения формулы
+        formula_widget = QWidget()
+        formula_layout = QVBoxLayout(formula_widget)
+
+        self.figure = Figure()
+        self.canvas = FigureCanvas(self.figure)
+
+        formula_layout.addWidget(self.canvas)
+        formula_layout.addStretch()
+
+        # Добавляем красивое отображение формулы в правую верхнюю часть
+        top_right_layout.addWidget(formula_widget)
 
         # Виджет результатов
         results_widget = QWidget()
@@ -257,14 +279,7 @@ class MainScreen(QMainWindow):
         results_layout.addStretch()
 
         # Добавляем результаты в правую верхнюю часть
-        top_right_layout.addWidget(results_widget, stretch=65)
-
-        # Виджет красивого отображения формулы
-        formula_widget = QWidget()
-        formula_layout = QVBoxLayout()
-
-        # Добавляем красивое отображение формулы в правую верхнюю часть
-        top_right_layout.addWidget(formula_widget, stretch=35)
+        top_right_layout.addWidget(results_widget)
 
         # Добавляем правую верхнюю часть в правую сторону
         right_layout.addWidget(top_right_widget, stretch=40)
@@ -351,6 +366,20 @@ class MainScreen(QMainWindow):
         header.setSectionResizeMode(QHeaderView.Stretch)
         # растягиваем таблицу на всю высоту
         table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
+
+    def update_beautiful_function(self):
+        latex_text = self.function_input.text()
+        self.figure.clear()
+        ax = self.figure.add_subplot(111)
+        ax.set_xticks([])
+        ax.set_yticks([])
+        try:
+            func = Function(latex_text)
+            latex_expr = func.get_latex_func()
+            ax.text(0.5, 0.5, f'${latex_expr}$', fontsize=15, ha='center', va='center')
+        except Exception as e:
+            ax.text(0.5, 0.5, 'Ошибка ввода', fontsize=15, ha='center', va='center', color='red')
+        self.canvas.draw()
     
     def reset_output(self): # TODO : ДОБАВИТЬ ОЧИСТКУ/УДАЛЕНИЕ ГРАФИКА
         self.result_time_label.setText("")
@@ -427,9 +456,6 @@ class MainScreen(QMainWindow):
                 eps_loc = float(self.loc_table.item(0, 1).text().replace(",", ".")) # eps
             case _:
                 return
-
-        # Рисуем красиво введенную функцию
-        # TODO : рисование функции
 
         # Расчет
         time_start = time()
