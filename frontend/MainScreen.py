@@ -150,6 +150,9 @@ class MainScreen(QMainWindow):
         self.loc_methods = QComboBox()
         self.loc_methods.addItem("Метод Нелдера-Мида")
         self.loc_methods.addItem("Метод Пауэлла")
+        self.loc_methods.addItem("Градиентный спуск")
+        self.loc_methods.addItem("Метод Ньютона")
+        self.loc_methods.addItem("BFGS")
         self.loc_methods.setFixedHeight(40)
         self.loc_methods.setFont(font)
         bottom_left_layout.addWidget(self.loc_methods)
@@ -261,4 +264,12 @@ class MainScreen(QMainWindow):
 
         elif selected_method == "Метод Нелдера-Мида" or selected_method == "Метод Пауэлла":
             headers = ["N", "ε"]
+            self.set_table_parameters(table, headers)
+
+        elif selected_method == "Метод Ньютона" or selected_method == "BFGS":
+            headers = ["N", "ε", "h"]
+            self.set_table_parameters(table, headers)
+
+        elif selected_method == "Градиентный спуск":
+            headers = ["N", "ε", "h", "λ"]
             self.set_table_parameters(table, headers)
