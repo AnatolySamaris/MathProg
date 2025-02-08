@@ -16,9 +16,6 @@ from PyQt5.QtWidgets import QStyledItemDelegate
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-# import matplotlib.pyplot as plt
-# plt.rcParams['text.usetex'] = True  # Включаем поддержку LaTeX
-# plt.rcParams['text.latex.preamble'] = r'\usepackage{amsmath}'  # Подключаем пакет amsmath
 
 from backend.Function import Function
 from backend.Optimizator import Optimizator
