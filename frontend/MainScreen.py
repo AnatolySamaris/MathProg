@@ -357,7 +357,7 @@ class MainScreen(QMainWindow):
 
         self.error_message_label.setText("")
 
-    def validate_inputs(self) -> bool:  # TODO : РЕАЛИЗОВАТЬ ВАЛИДАЦИЮ ВВОДА ВСЕГО ЧТО ЕСТЬ
+    def validate_inputs(self) -> bool:
         if len(self.function_input.text().strip()) == 0:
             self.error_message_label.setText("Функция не введена!")
             return False
@@ -367,11 +367,19 @@ class MainScreen(QMainWindow):
         if len(self.upper_bound_input.text().strip()) == 0:
             self.error_message_label.setText("Верхняя граница xi не введена!")
             return False
+        for col in range(self.glob_table.columnCount()):
+            if (self.glob_table.item(0, col).text().strip()) == 0:
+                self.error_message_label.setText("Глобальный метод не инициализирован!")
+                return False
+        for col in range(self.loc_table.columnCount()):
+            if (self.loc_table.item(0, col).text().strip()) == 0:
+                self.error_message_label.setText("Локальный метод не инициализирован!")
+                return False
         return True
 
     def calculation(self):
         self.reset_output()
-        
+
         if not self.validate_inputs():
             return
 
@@ -390,23 +398,23 @@ class MainScreen(QMainWindow):
         # Получаем инициализирующие переменные из таблицы глобальной оптимизации
         match self.glob_methods.currentText():
             case "Метод Монте-Карло":
-                N = int(self.glob_table.item(1, 0))  # N
+                N = int(self.glob_table.item(0, 0).text())  # N
             case "Метод имитации отжига":
-                Tmax = float(self.glob_table.item(1, 0))  # Tmax
-                L = int(self.glob_table.item(1, 1))  # L
-                r = float(self.glob_table.item(1, 2))  # r
-                eps = float(self.glob_table.item(1, 3))    # eps
+                Tmax = float(self.glob_table.item(0, 0).text().replace(",", "."))  # Tmax
+                L = int(self.glob_table.item(0, 1).text())  # L
+                r = float(self.glob_table.item(0, 2).text().replace(",", "."))  # r
+                eps = float(self.glob_table.item(0, 3).text().replace(",", "."))    # eps
             case _:
                 return
 
         # Получаем инициализирующие переменные из таблицы локальной оптимизации
         match self.loc_methods.currentText():
             case "Метод Нелдера-Мида":
-                N_loc = int(self.loc_table.item(1, 0))  # N
-                eps_loc = float(self.loc_table.item(1, 1)) # eps
+                N_loc = int(self.loc_table.item(0, 0).text())  # N
+                eps_loc = float(self.loc_table.item(0, 1).text().replace(",", ".")) # eps
             case "Метод Пауэлла":
-                N_loc = int(self.loc_table.item(1, 0))  # N
-                eps_loc = float(self.loc_table.item(1, 1)) # eps
+                N_loc = int(self.loc_table.item(0, 0).text())  # N
+                eps_loc = float(self.loc_table.item(0, 1).text().replace(",", ".")) # eps
             case _:
                 return
 
