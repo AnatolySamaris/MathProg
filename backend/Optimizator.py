@@ -21,7 +21,7 @@ class Optimizator:
 
         for _ in range(N):
             x = np.random.uniform(low=x_low, high=x_high, size=n_vars)
-            if f(x) < f(x_min):
+            if x_min[0] is None or f(x) < f(x_min):
                 glob_history.append(x_min)
                 x_min = x
 

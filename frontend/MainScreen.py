@@ -1,4 +1,10 @@
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QDesktopWidget, QFrame, QLineEdit, QComboBox, QTableWidget, QTableWidgetItem, QSizePolicy, QHeaderView
+from PyQt5.QtWidgets import (
+    QApplication, QMainWindow, QWidget, 
+    QVBoxLayout, QHBoxLayout, QLabel, 
+    QDesktopWidget, QFrame, QLineEdit, 
+    QComboBox, QTableWidget, QTableWidgetItem, 
+    QSizePolicy, QHeaderView, QPushButton
+)
 from PyQt5.QtGui import QPalette, QColor
 from PyQt5.QtCore import Qt
 from functools import partial
@@ -7,6 +13,11 @@ from PyQt5.QtGui import QIntValidator, QDoubleValidator
 from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtCore import QRegExp
 from PyQt5.QtWidgets import QItemDelegate, QStyledItemDelegate
+
+from backend.Function import Function
+from backend.Optimizator import Optimizator
+
+from time import time
 
 class DoubleValidatorDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
@@ -25,6 +36,7 @@ class DoubleValidatorDelegate(QStyledItemDelegate):
 class MainScreen(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.optimizer = Optimizator()
 
         self.title = "Учебно-исследовательский проект"
         self.width = 1200
@@ -96,8 +108,8 @@ class MainScreen(QMainWindow):
         constraint_input_layout.addWidget(self.upper_bound_input)
         top_left_layout.addLayout(constraint_input_layout)
 
-        # строка "Сообщение об ошибке" красным цветом
-        self.error_message_label = QLabel("Сообщение об ошибке")
+        # сообщение об ошибке красным цветом
+        self.error_message_label = QLabel()
         self.error_message_label.setFont(font)
         palette = QPalette()
         palette.setColor(QPalette.WindowText, QColor("red"))
@@ -174,6 +186,26 @@ class MainScreen(QMainWindow):
             partial(self.update_table, self.loc_methods, self.loc_table)
         )
 
+        self.button_calculate = QPushButton()
+        self.button_calculate.setText("Расчитать")
+        self.button_calculate.setMinimumHeight(32)
+        self.button_calculate.setStyleSheet("""
+            QPushButton {
+                border: 1px solid black;
+                background-color: white;
+                font-size: 18px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: lightgray;
+            }
+            QPushButton:pressed {
+                background-color: darkgray;
+            }
+        """)
+        self.button_calculate.clicked.connect(self.calculation)
+        bottom_left_layout.addWidget(self.button_calculate)
+
         # добавляем нижнюю часть в левую часть
         left_layout.addWidget(bottom_left_widget, stretch=65)
 
@@ -185,12 +217,56 @@ class MainScreen(QMainWindow):
         main_separator.setFrameShape(QFrame.VLine)  # Вертикальная линия
         main_layout.addWidget(main_separator)
 
-        # правая часть
+
+
+        # правая сторона
         right_widget = QWidget()
         right_layout = QVBoxLayout(right_widget)
 
-        # верхняя часть правой части
+        # верхняя часть правой стороны
         top_right_widget = QWidget()
+        top_right_layout = QVBoxLayout(top_right_widget)
+
+        # Виджет результатов
+        results_widget = QWidget()
+        results_layout = QVBoxLayout(results_widget)
+
+        # Результаты
+        self.result_time_label = QLabel()
+        self.result_time_label.setStyleSheet("font-size: 18px;")
+        self.result_time_label.hide()
+        results_layout.addWidget(self.result_time_label)
+
+        self.result_value_label = QLabel()
+        self.result_value_label.setStyleSheet("font-size: 18px;")
+        self.result_value_label.hide()
+        results_layout.addWidget(self.result_value_label)
+        
+        self.result_point_label = QLabel()
+        self.result_point_label.setStyleSheet("font-size: 18px;")
+        self.result_point_label.hide()
+        results_layout.addWidget(self.result_point_label)
+
+        self.result_point = QLabel()
+        self.result_point.setText("")
+        self.result_point.setStyleSheet("font-size: 18px;")
+        self.result_point.hide()
+        results_layout.addWidget(self.result_point)
+        
+        # Добавляем вертикальный отступ чтобы прижать все элементы к верху
+        results_layout.addStretch()
+
+        # Добавляем результаты в правую верхнюю часть
+        top_right_layout.addWidget(results_widget, stretch=65)
+
+        # Виджет красивого отображения формулы
+        formula_widget = QWidget()
+        formula_layout = QVBoxLayout()
+
+        # Добавляем красивое отображение формулы в правую верхнюю часть
+        top_right_layout.addWidget(formula_widget, stretch=35)
+
+        # Добавляем правую верхнюю часть в правую сторону
         right_layout.addWidget(top_right_widget, stretch=40)
 
         # разделитель между верхней и нижней частью правой стороны
@@ -198,11 +274,14 @@ class MainScreen(QMainWindow):
         right_separator1.setFrameShape(QFrame.HLine)  # Горизонтальная линия
         right_layout.addWidget(right_separator1)
 
-        # нижняя часть правой части
+        # нижняя часть правой стороны
         bottom_right_widget = QWidget()
+        bottom_right_layout = QVBoxLayout(bottom_right_widget)
+
+        # Добавляем правую нижнюю часть в правую сторону
         right_layout.addWidget(bottom_right_widget, stretch=60)
 
-        # добавляем правую часть в главный layout
+        # добавляем правую сторону в главный layout
         main_layout.addWidget(right_widget, stretch=50)
 
     def center(self) -> None:
@@ -273,3 +352,131 @@ class MainScreen(QMainWindow):
         elif selected_method == "Градиентный спуск":
             headers = ["N", "ε", "h", "λ"]
             self.set_table_parameters(table, headers)
+    
+    def reset_output(self): # TODO : ДОБАВИТЬ ОЧИСТКУ/УДАЛЕНИЕ ГРАФИКА
+        self.result_time_label.setText("")
+        self.result_time_label.hide()
+
+        self.result_value_label.setText("")
+        self.result_value_label.hide()
+
+        self.result_point_label.setText("")
+        self.result_point_label.hide()
+
+        self.result_point.setText("")
+        self.result_point.hide()
+
+        self.error_message_label.setText("")
+
+    def validate_inputs(self) -> bool:
+        if len(self.function_input.text().strip()) == 0:
+            self.error_message_label.setText("Функция не введена!")
+            return False
+        if len(self.lower_bound_input.text().strip()) == 0:
+            self.error_message_label.setText("Нижняя граница xi не введена!")
+            return False
+        if len(self.upper_bound_input.text().strip()) == 0:
+            self.error_message_label.setText("Верхняя граница xi не введена!")
+            return False
+        for col in range(self.glob_table.columnCount()):
+            if (self.glob_table.item(0, col).text().strip()) == 0:
+                self.error_message_label.setText("Глобальный метод не инициализирован!")
+                return False
+        for col in range(self.loc_table.columnCount()):
+            if (self.loc_table.item(0, col).text().strip()) == 0:
+                self.error_message_label.setText("Локальный метод не инициализирован!")
+                return False
+        return True
+
+    def calculation(self):
+        self.reset_output()
+
+        if not self.validate_inputs():
+            return
+
+        # Парсим введенную функцию
+        try:
+            func = Function(self.function_input.text())
+            n_vars = func.count_vars()
+        except Exception:
+            self.error_message_label.setText("Ошибка при считывании функции!")
+            return
+        
+        # Получаем ограничения по xi
+        lower_x = float(self.lower_bound_input.text().strip())
+        upper_x = float(self.upper_bound_input.text().strip())
+
+        # Получаем инициализирующие переменные из таблицы глобальной оптимизации
+        match self.glob_methods.currentText():
+            case "Метод Монте-Карло":
+                N = int(self.glob_table.item(0, 0).text())  # N
+            case "Метод имитации отжига":
+                Tmax = float(self.glob_table.item(0, 0).text().replace(",", "."))  # Tmax
+                L = int(self.glob_table.item(0, 1).text())  # L
+                r = float(self.glob_table.item(0, 2).text().replace(",", "."))  # r
+                eps = float(self.glob_table.item(0, 3).text().replace(",", "."))    # eps
+            case _:
+                return
+
+        # Получаем инициализирующие переменные из таблицы локальной оптимизации
+        match self.loc_methods.currentText():
+            case "Метод Нелдера-Мида":
+                N_loc = int(self.loc_table.item(0, 0).text())  # N
+                eps_loc = float(self.loc_table.item(0, 1).text().replace(",", ".")) # eps
+            case "Метод Пауэлла":
+                N_loc = int(self.loc_table.item(0, 0).text())  # N
+                eps_loc = float(self.loc_table.item(0, 1).text().replace(",", ".")) # eps
+            case _:
+                return
+
+        # Рисуем красиво введенную функцию
+        # TODO : рисование функции
+
+        # Расчет
+        time_start = time()
+        if self.glob_methods.currentText() == "Метод Монте-Карло":
+            if self.loc_methods.currentText() == "Метод Нелдера-Мида":
+                min_point, global_history, local_history = Optimizator.monte_karlo(
+                    func, n_vars, lower_x, upper_x, N, Optimizator.nelder_mead,
+                    eps_loc, N_loc
+                )
+            elif self.loc_methods.currentText() == "Метод Пауэлла":
+                min_point, global_history, local_history = Optimizator.monte_karlo(
+                    func, n_vars, lower_x, upper_x, N, Optimizator.powell,
+                    eps_loc, N_loc
+                )
+            else:
+                return
+        elif self.glob_methods.currentText() == "Метод имитации отжига":
+            if self.loc_methods.currentText() == "Метод Нелдера-Мида":
+                min_point, global_history, local_history = Optimizator.annealing_imitation(
+                    func, n_vars, lower_x, upper_x, Tmax, L, r, eps, Optimizator.nelder_mead,
+                    eps_loc, N_loc
+                )
+            elif self.loc_methods.currentText() == "Метод Пауэлла":
+                min_point, global_history, local_history = Optimizator.annealing_imitation(
+                    func, n_vars, lower_x, upper_x, Tmax, L, r, eps, Optimizator.powell,
+                    eps_loc, N_loc
+                )
+            else:
+                return
+
+        # Получаем результаты
+        time_end = time() - time_start 
+        min_value = func(min_point)
+        vars = func.get_vars()
+
+        # Вывод результатов
+        self.result_time_label.setText(f"<b>Время работы алгоритма:</b> {round(time_end, 4)} сек")
+        self.result_time_label.show()
+        self.result_value_label.setText(f"<b>Минимум функции f(x*):</b> {round(min_value, 6)}")
+        self.result_value_label.show()
+        self.result_point_label.setText("<b>Минимум достигается в точке:</b>")
+        self.result_point_label.show()
+        self.result_point.setText(f"({'; '.join(vars)}) = ({'; '.join(map(lambda x: str(round(x, 6)), min_point))})")
+        self.result_point.show()
+
+        # Рисуем график
+        # TODO : РИСОВАНИЕ ГРАФИКА
+
+    

@@ -19,6 +19,9 @@ class Function:
     
     def count_vars(self):
         return len(self.variables)
+    
+    def get_vars(self):
+        return list(map(lambda x: re.sub(r"[{}_]", "", str(x)), self.variables))
 
     def __parse_func(self, str_func: str):
         without_spaces = str_func.replace(" ", "")
