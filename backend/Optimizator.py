@@ -110,7 +110,7 @@ class Optimizator:
             x_start, 
             method='powell', 
             bounds=bounds,
-            options={'fatol': eps_loc, 'maxiter': N_loc},
+            options={'ftol': eps_loc, 'maxiter': N_loc},
             callback=callback
         )
 
@@ -146,7 +146,7 @@ class Optimizator:
 
         return (x_min.x, loc_history)
 
-    def gradient_descent(f, x_start, x_low: float, x_high: float, learning_rate: float, N_loc: int, eps_loc: float, h: float):
+    def gradient_descent(f, x_start, x_low: float, x_high: float, learning_rate: float, eps_loc: float, N_loc: int, h: float):
         """
         Реализует метод градиентного спуска с ограничениями.
         Параметры:
@@ -159,7 +159,7 @@ class Optimizator:
             h - шаг для численного вычисления градиента
         """
         x_min = x_start.copy()
-        loc_history = [x.copy()]
+        loc_history = [x_min.copy()]
 
         def numerical_gradient(f, x, h):
             grad = np.zeros_like(x)
@@ -191,7 +191,6 @@ class Optimizator:
             x_start - начальная точка
             x_low, x_high - нижняя и верхняя границы x
             eps_loc - значение для критерия останова
-            N_loc - максимальное число итераций
             h - шаг для численного вычисления градиента
         """
         loc_history = [x_start.copy()]

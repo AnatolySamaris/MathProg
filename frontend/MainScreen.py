@@ -89,6 +89,7 @@ class MainScreen(QMainWindow):
         fx_label.setFont(font)
         self.function_input = QLineEdit()
         self.function_input.setFont(font)
+        self.function_input.setAlignment(Qt.AlignCenter)
         self.function_input.setValidator(function_validator)
         self.function_input.textChanged.connect(self.update_beautiful_function)
         function_input_layout.addWidget(fx_label)
@@ -104,11 +105,13 @@ class MainScreen(QMainWindow):
         constraint_input_layout = QHBoxLayout()
         self.lower_bound_input = QLineEdit()
         self.lower_bound_input.setFont(font)
+        self.lower_bound_input.setAlignment(Qt.AlignCenter)
         self.lower_bound_input.setValidator(bounds_validator)
         xi_label = QLabel("<p> &lt;= x<sub>i</sub> &lt;= </p>")
         xi_label.setFont(font)
         self.upper_bound_input = QLineEdit()
         self.upper_bound_input.setFont(font)
+        self.upper_bound_input.setAlignment(Qt.AlignCenter)
         self.upper_bound_input.setValidator(bounds_validator)
         constraint_input_layout.addWidget(self.lower_bound_input)
         constraint_input_layout.addWidget(xi_label)
@@ -293,6 +296,20 @@ class MainScreen(QMainWindow):
         bottom_right_widget = QWidget()
         bottom_right_layout = QVBoxLayout(bottom_right_widget)
 
+        # Виджет для графика
+        graph_widget = QWidget()
+        graph_layout = QVBoxLayout(graph_widget)
+
+        # Создаем фигуру и холст для графика
+        self.graph_figure = Figure()
+        self.graph_canvas = FigureCanvas(self.graph_figure)
+
+        # Добавляем холст в layout
+        graph_layout.addWidget(self.graph_canvas)
+
+        # Добавляем виджет с графиком в правую нижнюю часть
+        bottom_right_layout.addWidget(graph_widget)
+
         # Добавляем правую нижнюю часть в правую сторону
         right_layout.addWidget(bottom_right_widget, stretch=60)
 
@@ -312,13 +329,6 @@ class MainScreen(QMainWindow):
     def set_table_parameters(self, table, headers):
         # убираем индексы строк
         table.verticalHeader().setVisible(False)
-
-        # растягиваем таблицу на всю высоту
-        table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
-
-        # настраиваем растяжение заголовков на всю ширину
-        header = table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.Stretch)
 
         # стили для заголовков
         table.setStyleSheet("""
@@ -346,6 +356,9 @@ class MainScreen(QMainWindow):
         """
         Обновляет таблицу в зависимости от выбранного метода.
         """
+        # очищаем содержимое таблицы
+        table.clearContents()
+
         selected_method = methods.currentText()
 
         if selected_method == "Метод Монте-Карло":
@@ -360,13 +373,23 @@ class MainScreen(QMainWindow):
             headers = ["N", "ε"]
             self.set_table_parameters(table, headers)
 
-        elif selected_method == "Метод Ньютона" or selected_method == "BFGS":
+        elif selected_method == "Метод Ньютона":
+            headers = ["ε", "h"]
+            self.set_table_parameters(table, headers)
+
+        elif selected_method == "BFGS":
             headers = ["N", "ε", "h"]
             self.set_table_parameters(table, headers)
 
         elif selected_method == "Градиентный спуск":
             headers = ["N", "ε", "h", "λ"]
             self.set_table_parameters(table, headers)
+
+        # выравнивание столбцов на всю ширину
+        header = table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.Stretch)
+        # растягиваем таблицу на всю высоту
+        table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
     def update_beautiful_function(self):
         latex_text = self.function_input.text()
@@ -408,11 +431,11 @@ class MainScreen(QMainWindow):
             self.error_message_label.setText("Верхняя граница xi не введена!")
             return False
         for col in range(self.glob_table.columnCount()):
-            if (self.glob_table.item(0, col).text().strip()) == 0:
+            if not self.glob_table.item(0, col) or (self.glob_table.item(0, col).text().strip()) == 0:
                 self.error_message_label.setText("Глобальный метод не инициализирован!")
                 return False
         for col in range(self.loc_table.columnCount()):
-            if (self.loc_table.item(0, col).text().strip()) == 0:
+            if not self.loc_table.item(0, col) or (self.loc_table.item(0, col).text().strip()) == 0:
                 self.error_message_label.setText("Локальный метод не инициализирован!")
                 return False
         return True
@@ -455,6 +478,18 @@ class MainScreen(QMainWindow):
             case "Метод Пауэлла":
                 N_loc = int(self.loc_table.item(0, 0).text())  # N
                 eps_loc = float(self.loc_table.item(0, 1).text().replace(",", ".")) # eps
+            case "Метод Ньютона":
+                eps_loc = float(self.loc_table.item(0, 0).text().replace(",", ".")) # eps
+                h = float(self.loc_table.item(0, 1).text().replace(",", ".")) # h
+            case "BFGS":
+                N_loc = int(self.loc_table.item(0, 0).text())  # N
+                eps_loc = float(self.loc_table.item(0, 1).text().replace(",", ".")) # eps
+                h = float(self.loc_table.item(0, 2).text().replace(",", ".")) # h
+            case "Градиентный спуск":
+                N_loc = int(self.loc_table.item(0, 0).text())  # N
+                eps_loc = float(self.loc_table.item(0, 1).text().replace(",", ".")) # eps
+                h = float(self.loc_table.item(0, 2).text().replace(",", ".")) # h
+                lr = float(self.loc_table.item(0, 3).text().replace(",", ".")) # lr
             case _:
                 return
 
@@ -471,6 +506,21 @@ class MainScreen(QMainWindow):
                     func, n_vars, lower_x, upper_x, N, Optimizator.powell,
                     eps_loc, N_loc
                 )
+            elif self.loc_methods.currentText() == "Метод Ньютона":
+                min_point, global_history, local_history = Optimizator.monte_karlo(
+                    func, n_vars, lower_x, upper_x, N, Optimizator.tnc,
+                    eps_loc, h
+                )
+            elif self.loc_methods.currentText() == "BFGS":
+                min_point, global_history, local_history = Optimizator.monte_karlo(
+                    func, n_vars, lower_x, upper_x, N, Optimizator.bfgs,
+                    eps_loc, N_loc, h
+                )
+            elif self.loc_methods.currentText() == "Градиентный спуск":
+                min_point, global_history, local_history = Optimizator.monte_karlo(
+                    func, n_vars, lower_x, upper_x, N, Optimizator.gradient_descent,
+                    lr, eps_loc, N_loc, h
+                )
             else:
                 return
         elif self.glob_methods.currentText() == "Метод имитации отжига":
@@ -483,6 +533,21 @@ class MainScreen(QMainWindow):
                 min_point, global_history, local_history = Optimizator.annealing_imitation(
                     func, n_vars, lower_x, upper_x, Tmax, L, r, eps, Optimizator.powell,
                     eps_loc, N_loc
+                )
+            elif self.loc_methods.currentText() == "Метод Ньютона":
+                min_point, global_history, local_history = Optimizator.annealing_imitation(
+                    func, n_vars, lower_x, upper_x, Tmax, L, r, eps, Optimizator.tnc,
+                    eps_loc, h
+                )
+            elif self.loc_methods.currentText() == "BFGS":
+                min_point, global_history, local_history = Optimizator.annealing_imitation(
+                    func, n_vars, lower_x, upper_x, Tmax, L, r, eps, Optimizator.bfgs,
+                    eps_loc, N_loc, h
+                )
+            elif self.loc_methods.currentText() == "Градиентный спуск":
+                min_point, global_history, local_history = Optimizator.annealing_imitation(
+                    func, n_vars, lower_x, upper_x, Tmax, L, r, eps, Optimizator.gradient_descent,
+                    lr, eps_loc, N_loc, h
                 )
             else:
                 return
@@ -503,6 +568,18 @@ class MainScreen(QMainWindow):
         self.result_point.show()
 
         # Рисуем график
-        # TODO : РИСОВАНИЕ ГРАФИКА
-
-    
+        global_history_length = len(global_history)
+        local_history_length = len(local_history)
+        global_history_f = [func(x) for x in global_history]
+        global_steps = list(range(0, global_history_length))
+        local_history_f = [func(x) for x in local_history]
+        local_steps = list(range(global_history_length - 1, global_history_length - 1 + local_history_length))
+        self.graph_figure.clear()
+        ax = self.graph_figure.add_subplot(111)
+        ax.plot(global_steps, global_history_f, label="Глобальная оптимизация")
+        ax.plot(local_steps, local_history_f, label="Локальная оптимизация")
+        ax.set_xlabel("Итерации")
+        ax.set_ylabel("Значение функции")
+        ax.legend()
+        ax.grid(True)
+        self.graph_canvas.draw()
