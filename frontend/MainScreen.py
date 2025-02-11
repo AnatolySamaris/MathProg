@@ -336,21 +336,22 @@ class MainScreen(QMainWindow):
         self.move(qr.topLeft())
 
     def open_constraints_dialog(self):
-        # Получаем переменные из функции
         try:
             func = Function(self.function_input.text())
             variables = func.get_vars()
         except Exception:
             self.error_message_label.setText("Сначала введите функцию!")
             return
-
-        # Открываем диалоговое окно для задания ограничений
+        
         dialog = ConstraintsDialog(variables, self)
         if dialog.exec_() == QDialog.Accepted:
+            if not dialog.are_constraints_valid:
+                self.error_message_label.setText("Ограничения заданы неправильно!")
+                return
             self.constraints = dialog.constraints
-            # Отображаем ограничения в текстовом поле
             constraints_text = ", ".join([f"{var}: [{bounds[0]}, {bounds[1]}]" for var, bounds in self.constraints.items()])
             self.constraints_display.setText(constraints_text)
+            self.error_message_label.setText("")
 
     # общие настройки таблиц
     def set_table_parameters(self, table, headers):

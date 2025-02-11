@@ -11,6 +11,7 @@ class ConstraintsDialog(QDialog):
         super().__init__(parent)
         self.variables = variables
         self.constraints = {}
+        self.are_constraints_valid = True
         self.initUI()
 
     def initUI(self):
@@ -150,6 +151,8 @@ class ConstraintsDialog(QDialog):
         if self.type_combo.currentText() == "Задать для всех":
             lower = float(self.lower_bound_input.text().strip())
             upper = float(self.upper_bound_input.text().strip())
+            if lower >= upper:
+                self.are_constraints_valid = False
             for var in self.variables:
                 self.constraints[var] = [lower, upper]
         else:
@@ -159,6 +162,8 @@ class ConstraintsDialog(QDialog):
                     var = row_layout.itemAt(1).widget().text().split()[1]
                     lower = float(row_layout.itemAt(0).widget().text().strip())
                     upper = float(row_layout.itemAt(2).widget().text().strip())
+                    if lower >= upper:
+                        self.are_constraints_valid = False
                     self.constraints[var] = [lower, upper]
 
         super().accept()
