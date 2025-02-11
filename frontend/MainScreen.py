@@ -487,98 +487,111 @@ class MainScreen(QMainWindow):
             upper_x.append(self.constraints[x][1])
 
         # Получаем инициализирующие переменные из таблицы глобальной оптимизации
-        match self.glob_methods.currentText():
-            case "Метод Монте-Карло":
-                N = int(self.glob_table.item(0, 0).text())  # N
-            case "Метод имитации отжига":
-                Tmax = float(self.glob_table.item(0, 0).text().replace(",", "."))  # Tmax
-                L = int(self.glob_table.item(0, 1).text())  # L
-                r = float(self.glob_table.item(0, 2).text().replace(",", "."))  # r
-                eps = float(self.glob_table.item(0, 3).text().replace(",", "."))    # eps
-            case _:
-                return
+        try:
+            match self.glob_methods.currentText():
+                case "Метод Монте-Карло":
+                    N = int(self.glob_table.item(0, 0).text())  # N
+                case "Метод имитации отжига":
+                    Tmax = float(self.glob_table.item(0, 0).text().replace(",", "."))  # Tmax
+                    L = int(self.glob_table.item(0, 1).text())  # L
+                    r = float(self.glob_table.item(0, 2).text().replace(",", "."))  # r
+                    eps = float(self.glob_table.item(0, 3).text().replace(",", "."))    # eps
+                case _:
+                    return
+        except Exception as e:
+            self.error_message_label.setText("Ошибка при инициализации глобального метода!")
+            return
 
         # Получаем инициализирующие переменные из таблицы локальной оптимизации
-        match self.loc_methods.currentText():
-            case "Метод Нелдера-Мида":
-                N_loc = int(self.loc_table.item(0, 0).text())  # N
-                eps_loc = float(self.loc_table.item(0, 1).text().replace(",", ".")) # eps
-            case "Метод Пауэлла":
-                N_loc = int(self.loc_table.item(0, 0).text())  # N
-                eps_loc = float(self.loc_table.item(0, 1).text().replace(",", ".")) # eps
-            case "Метод Ньютона":
-                eps_loc = float(self.loc_table.item(0, 0).text().replace(",", ".")) # eps
-                h = float(self.loc_table.item(0, 1).text().replace(",", ".")) # h
-            case "BFGS":
-                N_loc = int(self.loc_table.item(0, 0).text())  # N
-                eps_loc = float(self.loc_table.item(0, 1).text().replace(",", ".")) # eps
-                h = float(self.loc_table.item(0, 2).text().replace(",", ".")) # h
-            case "Градиентный спуск":
-                N_loc = int(self.loc_table.item(0, 0).text())  # N
-                eps_loc = float(self.loc_table.item(0, 1).text().replace(",", ".")) # eps
-                h = float(self.loc_table.item(0, 2).text().replace(",", ".")) # h
-                lr = float(self.loc_table.item(0, 3).text().replace(",", ".")) # lr
-            case _:
-                return
+        try:
+            match self.loc_methods.currentText():
+                case "Метод Нелдера-Мида":
+                    N_loc = int(self.loc_table.item(0, 0).text())  # N
+                    eps_loc = float(self.loc_table.item(0, 1).text().replace(",", ".")) # eps
+                case "Метод Пауэлла":
+                    N_loc = int(self.loc_table.item(0, 0).text())  # N
+                    eps_loc = float(self.loc_table.item(0, 1).text().replace(",", ".")) # eps
+                case "Метод Ньютона":
+                    eps_loc = float(self.loc_table.item(0, 0).text().replace(",", ".")) # eps
+                    h = float(self.loc_table.item(0, 1).text().replace(",", ".")) # h
+                case "BFGS":
+                    N_loc = int(self.loc_table.item(0, 0).text())  # N
+                    eps_loc = float(self.loc_table.item(0, 1).text().replace(",", ".")) # eps
+                    h = float(self.loc_table.item(0, 2).text().replace(",", ".")) # h
+                case "Градиентный спуск":
+                    N_loc = int(self.loc_table.item(0, 0).text())  # N
+                    eps_loc = float(self.loc_table.item(0, 1).text().replace(",", ".")) # eps
+                    h = float(self.loc_table.item(0, 2).text().replace(",", ".")) # h
+                    lr = float(self.loc_table.item(0, 3).text().replace(",", ".")) # lr
+                case _:
+                    return
+        except Exception as e:
+            self.error_message_label.setText("Ошибка при инициализации локального метода!")
+            return
 
         # Расчет
         time_start = time()
-        if self.glob_methods.currentText() == "Метод Монте-Карло":
-            if self.loc_methods.currentText() == "Метод Нелдера-Мида":
-                min_point, global_history, local_history = Optimizator.monte_karlo(
-                    func, n_vars, lower_x, upper_x, N, Optimizator.nelder_mead,
-                    eps_loc, N_loc
-                )
-            elif self.loc_methods.currentText() == "Метод Пауэлла":
-                min_point, global_history, local_history = Optimizator.monte_karlo(
-                    func, n_vars, lower_x, upper_x, N, Optimizator.powell,
-                    eps_loc, N_loc
-                )
-            elif self.loc_methods.currentText() == "Метод Ньютона":
-                min_point, global_history, local_history = Optimizator.monte_karlo(
-                    func, n_vars, lower_x, upper_x, N, Optimizator.tnc,
-                    eps_loc, h
-                )
-            elif self.loc_methods.currentText() == "BFGS":
-                min_point, global_history, local_history = Optimizator.monte_karlo(
-                    func, n_vars, lower_x, upper_x, N, Optimizator.bfgs,
-                    eps_loc, N_loc, h
-                )
-            elif self.loc_methods.currentText() == "Градиентный спуск":
-                min_point, global_history, local_history = Optimizator.monte_karlo(
-                    func, n_vars, lower_x, upper_x, N, Optimizator.gradient_descent,
-                    lr, eps_loc, N_loc, h
-                )
-            else:
-                return
-        elif self.glob_methods.currentText() == "Метод имитации отжига":
-            if self.loc_methods.currentText() == "Метод Нелдера-Мида":
-                min_point, global_history, local_history = Optimizator.annealing_imitation(
-                    func, n_vars, lower_x, upper_x, Tmax, L, r, eps, Optimizator.nelder_mead,
-                    eps_loc, N_loc
-                )
-            elif self.loc_methods.currentText() == "Метод Пауэлла":
-                min_point, global_history, local_history = Optimizator.annealing_imitation(
-                    func, n_vars, lower_x, upper_x, Tmax, L, r, eps, Optimizator.powell,
-                    eps_loc, N_loc
-                )
-            elif self.loc_methods.currentText() == "Метод Ньютона":
-                min_point, global_history, local_history = Optimizator.annealing_imitation(
-                    func, n_vars, lower_x, upper_x, Tmax, L, r, eps, Optimizator.tnc,
-                    eps_loc, h
-                )
-            elif self.loc_methods.currentText() == "BFGS":
-                min_point, global_history, local_history = Optimizator.annealing_imitation(
-                    func, n_vars, lower_x, upper_x, Tmax, L, r, eps, Optimizator.bfgs,
-                    eps_loc, N_loc, h
-                )
-            elif self.loc_methods.currentText() == "Градиентный спуск":
-                min_point, global_history, local_history = Optimizator.annealing_imitation(
-                    func, n_vars, lower_x, upper_x, Tmax, L, r, eps, Optimizator.gradient_descent,
-                    lr, eps_loc, N_loc, h
-                )
-            else:
-                return
+
+        try:
+            if self.glob_methods.currentText() == "Метод Монте-Карло":
+                if self.loc_methods.currentText() == "Метод Нелдера-Мида":
+                    min_point, global_history, local_history = Optimizator.monte_karlo(
+                        func, n_vars, lower_x, upper_x, N, Optimizator.nelder_mead,
+                        eps_loc, N_loc
+                    )
+                elif self.loc_methods.currentText() == "Метод Пауэлла":
+                    min_point, global_history, local_history = Optimizator.monte_karlo(
+                        func, n_vars, lower_x, upper_x, N, Optimizator.powell,
+                        eps_loc, N_loc
+                    )
+                elif self.loc_methods.currentText() == "Метод Ньютона":
+                    min_point, global_history, local_history = Optimizator.monte_karlo(
+                        func, n_vars, lower_x, upper_x, N, Optimizator.tnc,
+                        eps_loc, h
+                    )
+                elif self.loc_methods.currentText() == "BFGS":
+                    min_point, global_history, local_history = Optimizator.monte_karlo(
+                        func, n_vars, lower_x, upper_x, N, Optimizator.bfgs,
+                        eps_loc, N_loc, h
+                    )
+                elif self.loc_methods.currentText() == "Градиентный спуск":
+                    min_point, global_history, local_history = Optimizator.monte_karlo(
+                        func, n_vars, lower_x, upper_x, N, Optimizator.gradient_descent,
+                        lr, eps_loc, N_loc, h
+                    )
+                else:
+                    return
+            elif self.glob_methods.currentText() == "Метод имитации отжига":
+                if self.loc_methods.currentText() == "Метод Нелдера-Мида":
+                    min_point, global_history, local_history = Optimizator.annealing_imitation(
+                        func, n_vars, lower_x, upper_x, Tmax, L, r, eps, Optimizator.nelder_mead,
+                        eps_loc, N_loc
+                    )
+                elif self.loc_methods.currentText() == "Метод Пауэлла":
+                    min_point, global_history, local_history = Optimizator.annealing_imitation(
+                        func, n_vars, lower_x, upper_x, Tmax, L, r, eps, Optimizator.powell,
+                        eps_loc, N_loc
+                    )
+                elif self.loc_methods.currentText() == "Метод Ньютона":
+                    min_point, global_history, local_history = Optimizator.annealing_imitation(
+                        func, n_vars, lower_x, upper_x, Tmax, L, r, eps, Optimizator.tnc,
+                        eps_loc, h
+                    )
+                elif self.loc_methods.currentText() == "BFGS":
+                    min_point, global_history, local_history = Optimizator.annealing_imitation(
+                        func, n_vars, lower_x, upper_x, Tmax, L, r, eps, Optimizator.bfgs,
+                        eps_loc, N_loc, h
+                    )
+                elif self.loc_methods.currentText() == "Градиентный спуск":
+                    min_point, global_history, local_history = Optimizator.annealing_imitation(
+                        func, n_vars, lower_x, upper_x, Tmax, L, r, eps, Optimizator.gradient_descent,
+                        lr, eps_loc, N_loc, h
+                    )
+                else:
+                    return
+        except Exception as e:
+            self.error_message_label.setText("Ошибка при расчете. Проверьте вводные данные.")
+            return
 
         # Получаем результаты
         time_end = time() - time_start 
