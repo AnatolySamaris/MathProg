@@ -76,12 +76,13 @@ class Optimizator:
             loc_history.append(x.copy())
 
         # bounds = [(x_low, x_high) for _ in range(len(x_start))]
+        bounds = list(zip(x_low, x_high))
         
         x_min = minimize(
             f, 
             x_start, 
             method='nelder-mead', 
-            # bounds=bounds,
+            bounds=bounds,
             options={'fatol': eps_loc, 'maxiter': N_loc},
             callback=callback
         )
@@ -104,12 +105,13 @@ class Optimizator:
             loc_history.append(x.copy())
 
         # bounds = [(x_low, x_high) for _ in range(len(x_start))]
+        bounds = list(zip(x_low, x_high))
         
         x_min = minimize(
             f, 
             x_start, 
             method='powell', 
-            # bounds=bounds,
+            bounds=bounds,
             options={'ftol': eps_loc, 'maxiter': N_loc},
             callback=callback
         )

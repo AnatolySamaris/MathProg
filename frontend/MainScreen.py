@@ -555,6 +555,7 @@ class MainScreen(QMainWindow):
 
     def calculation(self):
         self.reset_output()
+        self.repaint()
 
         if not self.validate_inputs():
             return
@@ -682,4 +683,4 @@ class MainScreen(QMainWindow):
     def update_time_label(self):
         self.elapsed_time = time() - self.start_time
         self.result_time_label.setText(f"<b>Время работы алгоритма:</b> {round(self.elapsed_time, 4)} сек")
-        QApplication.processEvents()  # Принудительное обновление интерфейса
+        # QApplication.processEvents()  # Принудительное обновление интерфейса
