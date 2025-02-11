@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import (
-    QMainWindow, QWidget, 
+    QMainWindow, QWidget, QDialog, QTextEdit,
     QVBoxLayout, QHBoxLayout, QLabel, 
     QDesktopWidget, QFrame, QLineEdit, 
     QComboBox, QTableWidget, QTableWidgetItem, 
@@ -16,6 +16,8 @@ from PyQt5.QtWidgets import QStyledItemDelegate
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+
+from frontend.ConstraintsDialog import ConstraintsDialog
 
 from backend.Function import Function
 from backend.Optimizator import Optimizator
@@ -39,6 +41,8 @@ class DoubleValidatorDelegate(QStyledItemDelegate):
 class MainScreen(QMainWindow):
     def __init__(self):
         super().__init__()
+
+        self.constraints = {}
 
         self.title = "Учебно-исследовательский проект"
         self.width = 1200
@@ -96,27 +100,37 @@ class MainScreen(QMainWindow):
         function_input_layout.addWidget(self.function_input)
         top_left_layout.addLayout(function_input_layout)
 
-        # слова "Ограничение для xi"
+        # ОГРАНИЧЕНИЯ
         constraint_label = QLabel("<p>Ограничение для x<sub>i</sub></p>")
         constraint_label.setFont(font)
         top_left_layout.addWidget(constraint_label)
 
-        # два поля ввода для ограничений
-        constraint_input_layout = QHBoxLayout()
-        self.lower_bound_input = QLineEdit()
-        self.lower_bound_input.setFont(font)
-        self.lower_bound_input.setAlignment(Qt.AlignCenter)
-        self.lower_bound_input.setValidator(bounds_validator)
-        xi_label = QLabel("<p> &lt;= x<sub>i</sub> &lt;= </p>")
-        xi_label.setFont(font)
-        self.upper_bound_input = QLineEdit()
-        self.upper_bound_input.setFont(font)
-        self.upper_bound_input.setAlignment(Qt.AlignCenter)
-        self.upper_bound_input.setValidator(bounds_validator)
-        constraint_input_layout.addWidget(self.lower_bound_input)
-        constraint_input_layout.addWidget(xi_label)
-        constraint_input_layout.addWidget(self.upper_bound_input)
-        top_left_layout.addLayout(constraint_input_layout)
+        # Кнопка "Задать ограничения"
+        self.set_constraints_button = QPushButton("Задать ограничения")
+        self.set_constraints_button.setFont(font)
+        self.set_constraints_button.setMinimumHeight(32)
+        self.set_constraints_button.setStyleSheet("""
+            QPushButton {
+                border: 1px solid black;
+                background-color: white;
+                font-size: 18px;
+            }
+            QPushButton:hover {
+                background-color: lightgray;
+            }
+            QPushButton:pressed {
+                background-color: darkgray;
+            }
+        """)
+        self.set_constraints_button.clicked.connect(self.open_constraints_dialog)
+        top_left_layout.addWidget(self.set_constraints_button)
+
+        # Поле для отображения ограничений
+        self.constraints_display = QTextEdit()
+        self.constraints_display.setFont(font)
+        self.constraints_display.setAlignment(Qt.AlignCenter)
+        self.constraints_display.setReadOnly(True)
+        top_left_layout.addWidget(self.constraints_display)
 
         # сообщение об ошибке красным цветом
         self.error_message_label = QLabel()
@@ -184,11 +198,7 @@ class MainScreen(QMainWindow):
         self.loc_table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.loc_table.setShowGrid(True)
         self.loc_table.setFont(font)
-        # self.loc_table.setStyleSheet("""
-        #     QHeaderView::section {
-        #         border: 1px solid gray;
-        #     }
-        # """)
+
         bottom_left_layout.addWidget(self.loc_table, stretch=2) 
         self.update_table(self.loc_methods, self.loc_table)
 
@@ -325,6 +335,24 @@ class MainScreen(QMainWindow):
         qr.moveCenter(cp)
         self.move(qr.topLeft())
 
+    def open_constraints_dialog(self):
+        try:
+            func = Function(self.function_input.text())
+            variables = func.get_vars()
+        except Exception:
+            self.error_message_label.setText("Сначала введите функцию!")
+            return
+        
+        dialog = ConstraintsDialog(variables, self)
+        if dialog.exec_() == QDialog.Accepted:
+            if not dialog.are_constraints_valid:
+                self.error_message_label.setText("Ограничения заданы неправильно!")
+                return
+            self.constraints = dialog.constraints
+            constraints_text = ", ".join([f"{var}: [{bounds[0]}, {bounds[1]}]" for var, bounds in self.constraints.items()])
+            self.constraints_display.setText(constraints_text)
+            self.error_message_label.setText("")
+
     # общие настройки таблиц
     def set_table_parameters(self, table, headers):
         # убираем индексы строк
@@ -401,6 +429,7 @@ class MainScreen(QMainWindow):
             func = Function(latex_text)
             latex_expr = func.get_latex_func()
             ax.text(0.5, 0.5, f'${latex_expr}$', fontsize=15, ha='center', va='center')
+            self.error_message_label.setText("")
         except Exception as e:
             ax.text(0.5, 0.5, 'Ошибка ввода', fontsize=15, ha='center', va='center', color='red')
         self.canvas.draw()
@@ -424,11 +453,8 @@ class MainScreen(QMainWindow):
         if len(self.function_input.text().strip()) == 0:
             self.error_message_label.setText("Функция не введена!")
             return False
-        if len(self.lower_bound_input.text().strip()) == 0:
-            self.error_message_label.setText("Нижняя граница xi не введена!")
-            return False
-        if len(self.upper_bound_input.text().strip()) == 0:
-            self.error_message_label.setText("Верхняя граница xi не введена!")
+        if len(self.constraints_display.toPlainText().strip()) == 0:
+            self.error_message_label.setText("Ограничения на переменные не заданы!")
             return False
         for col in range(self.glob_table.columnCount()):
             if not self.glob_table.item(0, col) or (self.glob_table.item(0, col).text().strip()) == 0:
@@ -455,102 +481,118 @@ class MainScreen(QMainWindow):
             return
         
         # Получаем ограничения по xi
-        lower_x = float(self.lower_bound_input.text().strip())
-        upper_x = float(self.upper_bound_input.text().strip())
+        lower_x = []
+        upper_x = []
+        for x in func.get_vars():
+            lower_x.append(self.constraints[x][0])
+            upper_x.append(self.constraints[x][1])
 
         # Получаем инициализирующие переменные из таблицы глобальной оптимизации
-        match self.glob_methods.currentText():
-            case "Метод Монте-Карло":
-                N = int(self.glob_table.item(0, 0).text())  # N
-            case "Метод имитации отжига":
-                Tmax = float(self.glob_table.item(0, 0).text().replace(",", "."))  # Tmax
-                L = int(self.glob_table.item(0, 1).text())  # L
-                r = float(self.glob_table.item(0, 2).text().replace(",", "."))  # r
-                eps = float(self.glob_table.item(0, 3).text().replace(",", "."))    # eps
-            case _:
-                return
+        try:
+            match self.glob_methods.currentText():
+                case "Метод Монте-Карло":
+                    N = int(self.glob_table.item(0, 0).text())  # N
+                case "Метод имитации отжига":
+                    Tmax = float(self.glob_table.item(0, 0).text().replace(",", "."))  # Tmax
+                    L = int(self.glob_table.item(0, 1).text())  # L
+                    r = float(self.glob_table.item(0, 2).text().replace(",", "."))  # r
+                    eps = float(self.glob_table.item(0, 3).text().replace(",", "."))    # eps
+                case _:
+                    return
+        except Exception as e:
+            self.error_message_label.setText("Ошибка при инициализации глобального метода!")
+            return
 
         # Получаем инициализирующие переменные из таблицы локальной оптимизации
-        match self.loc_methods.currentText():
-            case "Метод Нелдера-Мида":
-                N_loc = int(self.loc_table.item(0, 0).text())  # N
-                eps_loc = float(self.loc_table.item(0, 1).text().replace(",", ".")) # eps
-            case "Метод Пауэлла":
-                N_loc = int(self.loc_table.item(0, 0).text())  # N
-                eps_loc = float(self.loc_table.item(0, 1).text().replace(",", ".")) # eps
-            case "Метод Ньютона":
-                eps_loc = float(self.loc_table.item(0, 0).text().replace(",", ".")) # eps
-                h = float(self.loc_table.item(0, 1).text().replace(",", ".")) # h
-            case "BFGS":
-                N_loc = int(self.loc_table.item(0, 0).text())  # N
-                eps_loc = float(self.loc_table.item(0, 1).text().replace(",", ".")) # eps
-                h = float(self.loc_table.item(0, 2).text().replace(",", ".")) # h
-            case "Градиентный спуск":
-                N_loc = int(self.loc_table.item(0, 0).text())  # N
-                eps_loc = float(self.loc_table.item(0, 1).text().replace(",", ".")) # eps
-                h = float(self.loc_table.item(0, 2).text().replace(",", ".")) # h
-                lr = float(self.loc_table.item(0, 3).text().replace(",", ".")) # lr
-            case _:
-                return
+        try:
+            match self.loc_methods.currentText():
+                case "Метод Нелдера-Мида":
+                    N_loc = int(self.loc_table.item(0, 0).text())  # N
+                    eps_loc = float(self.loc_table.item(0, 1).text().replace(",", ".")) # eps
+                case "Метод Пауэлла":
+                    N_loc = int(self.loc_table.item(0, 0).text())  # N
+                    eps_loc = float(self.loc_table.item(0, 1).text().replace(",", ".")) # eps
+                case "Метод Ньютона":
+                    eps_loc = float(self.loc_table.item(0, 0).text().replace(",", ".")) # eps
+                    h = float(self.loc_table.item(0, 1).text().replace(",", ".")) # h
+                case "BFGS":
+                    N_loc = int(self.loc_table.item(0, 0).text())  # N
+                    eps_loc = float(self.loc_table.item(0, 1).text().replace(",", ".")) # eps
+                    h = float(self.loc_table.item(0, 2).text().replace(",", ".")) # h
+                case "Градиентный спуск":
+                    N_loc = int(self.loc_table.item(0, 0).text())  # N
+                    eps_loc = float(self.loc_table.item(0, 1).text().replace(",", ".")) # eps
+                    h = float(self.loc_table.item(0, 2).text().replace(",", ".")) # h
+                    lr = float(self.loc_table.item(0, 3).text().replace(",", ".")) # lr
+                case _:
+                    return
+        except Exception as e:
+            self.error_message_label.setText("Ошибка при инициализации локального метода!")
+            return
 
         # Расчет
         time_start = time()
-        if self.glob_methods.currentText() == "Метод Монте-Карло":
-            if self.loc_methods.currentText() == "Метод Нелдера-Мида":
-                min_point, global_history, local_history = Optimizator.monte_karlo(
-                    func, n_vars, lower_x, upper_x, N, Optimizator.nelder_mead,
-                    eps_loc, N_loc
-                )
-            elif self.loc_methods.currentText() == "Метод Пауэлла":
-                min_point, global_history, local_history = Optimizator.monte_karlo(
-                    func, n_vars, lower_x, upper_x, N, Optimizator.powell,
-                    eps_loc, N_loc
-                )
-            elif self.loc_methods.currentText() == "Метод Ньютона":
-                min_point, global_history, local_history = Optimizator.monte_karlo(
-                    func, n_vars, lower_x, upper_x, N, Optimizator.tnc,
-                    eps_loc, h
-                )
-            elif self.loc_methods.currentText() == "BFGS":
-                min_point, global_history, local_history = Optimizator.monte_karlo(
-                    func, n_vars, lower_x, upper_x, N, Optimizator.bfgs,
-                    eps_loc, N_loc, h
-                )
-            elif self.loc_methods.currentText() == "Градиентный спуск":
-                min_point, global_history, local_history = Optimizator.monte_karlo(
-                    func, n_vars, lower_x, upper_x, N, Optimizator.gradient_descent,
-                    lr, eps_loc, N_loc, h
-                )
-            else:
-                return
-        elif self.glob_methods.currentText() == "Метод имитации отжига":
-            if self.loc_methods.currentText() == "Метод Нелдера-Мида":
-                min_point, global_history, local_history = Optimizator.annealing_imitation(
-                    func, n_vars, lower_x, upper_x, Tmax, L, r, eps, Optimizator.nelder_mead,
-                    eps_loc, N_loc
-                )
-            elif self.loc_methods.currentText() == "Метод Пауэлла":
-                min_point, global_history, local_history = Optimizator.annealing_imitation(
-                    func, n_vars, lower_x, upper_x, Tmax, L, r, eps, Optimizator.powell,
-                    eps_loc, N_loc
-                )
-            elif self.loc_methods.currentText() == "Метод Ньютона":
-                min_point, global_history, local_history = Optimizator.annealing_imitation(
-                    func, n_vars, lower_x, upper_x, Tmax, L, r, eps, Optimizator.tnc,
-                    eps_loc, h
-                )
-            elif self.loc_methods.currentText() == "BFGS":
-                min_point, global_history, local_history = Optimizator.annealing_imitation(
-                    func, n_vars, lower_x, upper_x, Tmax, L, r, eps, Optimizator.bfgs,
-                    eps_loc, N_loc, h
-                )
-            elif self.loc_methods.currentText() == "Градиентный спуск":
-                min_point, global_history, local_history = Optimizator.annealing_imitation(
-                    func, n_vars, lower_x, upper_x, Tmax, L, r, eps, Optimizator.gradient_descent,
-                    lr, eps_loc, N_loc, h
-                )
-            else:
-                return
+
+        try:
+            if self.glob_methods.currentText() == "Метод Монте-Карло":
+                if self.loc_methods.currentText() == "Метод Нелдера-Мида":
+                    min_point, global_history, local_history = Optimizator.monte_karlo(
+                        func, n_vars, lower_x, upper_x, N, Optimizator.nelder_mead,
+                        eps_loc, N_loc
+                    )
+                elif self.loc_methods.currentText() == "Метод Пауэлла":
+                    min_point, global_history, local_history = Optimizator.monte_karlo(
+                        func, n_vars, lower_x, upper_x, N, Optimizator.powell,
+                        eps_loc, N_loc
+                    )
+                elif self.loc_methods.currentText() == "Метод Ньютона":
+                    min_point, global_history, local_history = Optimizator.monte_karlo(
+                        func, n_vars, lower_x, upper_x, N, Optimizator.tnc,
+                        eps_loc, h
+                    )
+                elif self.loc_methods.currentText() == "BFGS":
+                    min_point, global_history, local_history = Optimizator.monte_karlo(
+                        func, n_vars, lower_x, upper_x, N, Optimizator.bfgs,
+                        eps_loc, N_loc, h
+                    )
+                elif self.loc_methods.currentText() == "Градиентный спуск":
+                    min_point, global_history, local_history = Optimizator.monte_karlo(
+                        func, n_vars, lower_x, upper_x, N, Optimizator.gradient_descent,
+                        lr, eps_loc, N_loc, h
+                    )
+                else:
+                    return
+            elif self.glob_methods.currentText() == "Метод имитации отжига":
+                if self.loc_methods.currentText() == "Метод Нелдера-Мида":
+                    min_point, global_history, local_history = Optimizator.annealing_imitation(
+                        func, n_vars, lower_x, upper_x, Tmax, L, r, eps, Optimizator.nelder_mead,
+                        eps_loc, N_loc
+                    )
+                elif self.loc_methods.currentText() == "Метод Пауэлла":
+                    min_point, global_history, local_history = Optimizator.annealing_imitation(
+                        func, n_vars, lower_x, upper_x, Tmax, L, r, eps, Optimizator.powell,
+                        eps_loc, N_loc
+                    )
+                elif self.loc_methods.currentText() == "Метод Ньютона":
+                    min_point, global_history, local_history = Optimizator.annealing_imitation(
+                        func, n_vars, lower_x, upper_x, Tmax, L, r, eps, Optimizator.tnc,
+                        eps_loc, h
+                    )
+                elif self.loc_methods.currentText() == "BFGS":
+                    min_point, global_history, local_history = Optimizator.annealing_imitation(
+                        func, n_vars, lower_x, upper_x, Tmax, L, r, eps, Optimizator.bfgs,
+                        eps_loc, N_loc, h
+                    )
+                elif self.loc_methods.currentText() == "Градиентный спуск":
+                    min_point, global_history, local_history = Optimizator.annealing_imitation(
+                        func, n_vars, lower_x, upper_x, Tmax, L, r, eps, Optimizator.gradient_descent,
+                        lr, eps_loc, N_loc, h
+                    )
+                else:
+                    return
+        except Exception as e:
+            self.error_message_label.setText("Ошибка при расчете. Проверьте вводные данные.")
+            return
 
         # Получаем результаты
         time_end = time() - time_start 
