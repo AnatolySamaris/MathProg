@@ -33,8 +33,8 @@ class DoubleValidatorDelegate(QStyledItemDelegate):
         Создаем редактор (QLineEdit) с валидатором для ввода чисел.
         """
         editor = super().createEditor(parent, option, index)
-        validator = QDoubleValidator()  # Валидатор для чисел с плавающей запятой
-        validator.setNotation(QDoubleValidator.ScientificNotation)  # Разрешаем научную нотацию
+        validator = QDoubleValidator()
+        validator.setNotation(QDoubleValidator.ScientificNotation)
         editor.setValidator(validator)
         return editor
     
