@@ -3,19 +3,20 @@ from PyQt5.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QLabel, 
     QDesktopWidget, QFrame, QLineEdit, 
     QComboBox, QTableWidget, QTableWidgetItem, 
-    QSizePolicy, QHeaderView, QPushButton
+    QSizePolicy, QHeaderView, QPushButton, QStyledItemDelegate
 )
-from PyQt5.QtGui import QPalette, QColor
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
+from PyQt5.QtGui import (
+    QPalette, QColor, QFont, QIntValidator, 
+    QDoubleValidator, QRegExpValidator, QRegularExpressionValidator
+)
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer, QRegExp, QRegularExpression
+
 from functools import partial
-from PyQt5.QtGui import QFont
-from PyQt5.QtGui import QIntValidator, QDoubleValidator
-from PyQt5.QtGui import QRegExpValidator
-from PyQt5.QtCore import QRegExp
-from PyQt5.QtWidgets import QStyledItemDelegate, QApplication
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+
+import numpy as np
 
 from frontend.ConstraintsDialog import ConstraintsDialog
 
@@ -215,6 +216,23 @@ class MainScreen(QMainWindow):
         self.constraints_display.setAlignment(Qt.AlignCenter)
         self.constraints_display.setReadOnly(True)
         top_left_layout.addWidget(self.constraints_display)
+
+        # Поле ввода сида рандомизации
+        seed_layout = QHBoxLayout()
+
+        seed_label = QLabel("Сид генерации: ")
+        seed_label.setFont(font)
+
+        self.seed_input = QLineEdit()
+        self.seed_input.setFont(font)
+        seed_regex = QRegularExpression(r"^[0-9]+$")
+        seed_validator = QRegularExpressionValidator(seed_regex)
+        self.seed_input.setValidator(seed_validator)
+        
+        seed_layout.addWidget(seed_label)
+        seed_layout.addWidget(self.seed_input)
+
+        top_left_layout.addLayout(seed_layout)
 
         # сообщение об ошибке красным цветом
         self.error_message_label = QLabel()
@@ -507,6 +525,7 @@ class MainScreen(QMainWindow):
         latex_text = self.function_input.text()
         self.figure.clear()
         ax = self.figure.add_subplot(111)
+        ax.set_frame_on(False)
         ax.set_xticks([])
         ax.set_yticks([])
         try:
@@ -517,6 +536,12 @@ class MainScreen(QMainWindow):
         except Exception as e:
             ax.text(0.5, 0.5, 'Ошибка ввода', fontsize=15, ha='center', va='center', color='red')
         self.canvas.draw()
+    
+    def set_seed(self):
+        if len(self.seed_input.text().strip()) == 0:
+            np.random.seed(int(time() * 1e9) % 2**32)
+        else:
+            np.random.seed(int(self.seed_input.text().strip()))
     
     def reset_output(self): # TODO : ДОБАВИТЬ ОЧИСТКУ/УДАЛЕНИЕ ГРАФИКА
         self.result_time_label.setText("")
@@ -632,6 +657,7 @@ class MainScreen(QMainWindow):
             return
 
         # Создаем и запускаем поток для расчета
+        self.set_seed()
         self.calculation_thread = CalculationThread(
             self.func, n_vars, lower_x, upper_x,
             self.glob_methods.currentText(), self.loc_methods.currentText(),
