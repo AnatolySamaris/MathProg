@@ -525,6 +525,7 @@ class MainScreen(QMainWindow):
         latex_text = self.function_input.text()
         self.figure.clear()
         ax = self.figure.add_subplot(111)
+        ax.set_frame_on(False)
         ax.set_xticks([])
         ax.set_yticks([])
         try:
