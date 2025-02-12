@@ -18,15 +18,17 @@ class Optimizator:
         """
         x_min = np.random.uniform(low=x_low, high=x_high, size=n_vars)
         glob_history = [x_min.copy()]
+        symmetry = False
 
         for _ in range(N):
             x = np.random.uniform(low=x_low, high=x_high, size=n_vars)
             if x_min[0] is None or f(x) < f(x_min):
                 glob_history.append(x_min)
                 x_min = x
+            if f(x) == f(-x): symmetry = True
 
         x_min, loc_history = loc_method(f, x_min, x_low, x_high, *args, **kwargs)
-        return (x_min, glob_history, loc_history)
+        return (x_min, glob_history, loc_history, symmetry)
     
     def annealing_imitation(f, n_vars: int, x_low: list, x_high: list, T_max: float, L: int, r: float, eps: float, loc_method, *args, **kwargs):
         """
@@ -46,6 +48,8 @@ class Optimizator:
 
         x_min = np.random.uniform(low=x_low, high=x_high, size=n_vars)
         glob_history = [x_min.copy()]
+        symmetry = False
+
         while T > eps:
             for _ in range(L):
                 x = x_min + np.random.uniform(low=-eps, high=eps, size=n_vars)
@@ -54,10 +58,11 @@ class Optimizator:
                 if delta <= 0 or np.exp(-delta / T) > np.random.uniform(low=0, high=1): 
                     x_min = x
                     glob_history.append(x_min)
+                if f(x) == f(-x): symmetry = True
             T = r * T
         
         x_min, loc_history = loc_method(f, x_min, x_low, x_high, *args, **kwargs)
-        return (x_min, glob_history, loc_history)
+        return (x_min, glob_history, loc_history, symmetry)
     
 
     def nelder_mead(f, x_start, x_low: list, x_high: list, eps_loc: float, N_loc: int):
