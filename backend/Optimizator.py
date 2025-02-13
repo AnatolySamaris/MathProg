@@ -16,19 +16,54 @@ class Optimizator:
             loc_method - метод локальной оптимизацииS
             *args, **kwargs - аргументы метода локальной оптимизации
         """
+        x_low = np.array(x_low)
+        x_high = np.array(x_high)
+
+        # print("="*20, '\n', x_low, x_high, n_vars, '\n', '='*20)
         x_min = np.random.uniform(low=x_low, high=x_high, size=n_vars)
         glob_history = [x_min.copy()]
-        symmetry = False
+        symmetry = True
+        centers = (x_low + x_high) / 2
 
         for _ in range(N):
+            # if _ % 1000 == 0: print(_)
             x = np.random.uniform(low=x_low, high=x_high, size=n_vars)
             if x_min[0] is None or f(x) < f(x_min):
-                glob_history.append(x_min)
                 x_min = x
-            if f(x) == f(-x): symmetry = True
+                glob_history.append(x_min)
+            if f(x) - f(2 * centers - x) > 1e-6: symmetry = False
 
+        print(glob_history[-1])
+        print(f(glob_history[-1]))
         x_min, loc_history = loc_method(f, x_min, x_low, x_high, *args, **kwargs)
+        if symmetry:
+            if np.all(x_min - centers) < 1e-4: symmetry = None
+            else: symmetry = 2 * centers - x_min
+        else: symmetry = None
         return (x_min, glob_history, loc_history, symmetry)
+
+    # def monte_karlo(f, n_vars: int, x_low: list, x_high: list, N: int, loc_method, *args, **kwargs):
+    #     """
+    #     Ищет глобальный минимум функции методом Монте-Карло.
+    #     В качестве параметров принимает:
+    #         f - оптимизируемая функция
+    #         n_vars - число переменных
+    #         x_low, x_high - списки нижней и верхней границ x
+    #         N - число итераций
+    #         loc_method - метод локальной оптимизацииS
+    #         *args, **kwargs - аргументы метода локальной оптимизации
+    #     """
+    #     x_min = np.random.uniform(low=x_low, high=x_high, size=n_vars)
+    #     glob_history = [x_min.copy()]
+
+    #     for _ in range(N):
+    #         x = np.random.uniform(low=x_low, high=x_high, size=n_vars)
+    #         if x_min[0] is None or f(x) < f(x_min):
+    #             glob_history.append(x_min)
+    #             x_min = x
+
+    #     x_min, loc_history = loc_method(f, x_min, x_low, x_high, *args, **kwargs)
+    #     return (x_min, glob_history, loc_history)
     
     def annealing_imitation(f, n_vars: int, x_low: list, x_high: list, T_max: float, L: int, r: float, eps: float, loc_method, *args, **kwargs):
         """
@@ -44,11 +79,15 @@ class Optimizator:
             loc_method - метод локальной оптимизации
             *args, **kwargs - аргументы метода локальной оптимизации
         """
+        print("annealing", T_max, L, r, eps)
         T = T_max
+        x_low = np.array(x_low)
+        x_high = np.array(x_high)
 
         x_min = np.random.uniform(low=x_low, high=x_high, size=n_vars)
         glob_history = [x_min.copy()]
-        symmetry = False
+        symmetry = True
+        centers = (x_low + x_high) / 2
 
         while T > eps:
             for _ in range(L):
@@ -58,14 +97,20 @@ class Optimizator:
                 if delta <= 0 or np.exp(-delta / T) > np.random.uniform(low=0, high=1): 
                     x_min = x
                     glob_history.append(x_min)
-                if f(x) == f(-x): symmetry = True
+                if f(x) - f(2 * centers - x) > 1e-6: symmetry = False
             T = r * T
         
+        print(glob_history[-1])
+        print(f(glob_history[-1]))
         x_min, loc_history = loc_method(f, x_min, x_low, x_high, *args, **kwargs)
+        if symmetry:
+            if np.all(abs(x_min - centers)) < 1e-4: symmetry = None
+            else: symmetry = 2 * centers - x_min
+        else: symmetry = None
         return (x_min, glob_history, loc_history, symmetry)
     
 
-    def nelder_mead(f, x_start, x_low: list, x_high: list, eps_loc: float, N_loc: int):
+    def nelder_mead(f, x_start, x_low: list, x_high: list, N_loc: int, eps_loc: float):
         """
         Ищет локальный минимум функции методом Нелдера-Мида.
         В качестве параметров принимает:
@@ -75,6 +120,8 @@ class Optimizator:
             eps_loc - значение для критерия останова
             N_loc - максимальное число итераций
         """
+        print(x_start, x_low, x_high, eps_loc, N_loc)
+        print(f(x_start))
         loc_history = [x_start.copy()]
         def callback(x):
             x = np.clip(x, x_low, x_high)
@@ -94,7 +141,7 @@ class Optimizator:
 
         return (x_min.x, loc_history)
     
-    def powell(f, x_start, x_low: list, x_high: list, eps_loc: float, N_loc: int):
+    def powell(f, x_start, x_low: list, x_high: list, N_loc: int, eps_loc: float):
         """
         Ищет локальный минимум функции методом Пауэлла.
         В качестве параметров принимает:
@@ -104,6 +151,8 @@ class Optimizator:
             eps_loc - значение для критерия останова
             N_loc - максимальное число итераций
         """
+        print(x_start, x_low, x_high, eps_loc, N_loc)
+        print(f(x_start))
         loc_history = [x_start.copy()]
         def callback(x):
             x = np.clip(x, x_low, x_high)
@@ -123,7 +172,7 @@ class Optimizator:
 
         return (x_min.x, loc_history)
     
-    def bfgs(f, x_start, x_low: list, x_high: list, eps_loc: float, N_loc: int, h: float):
+    def bfgs(f, x_start, x_low: list, x_high: list, N_loc: int, eps_loc: float, h: float):
         """
         Ищет локальный минимум функции методом L-BFGS-B (поддерживает границы).
         При этом якобиан считается численно.
@@ -135,6 +184,8 @@ class Optimizator:
             N_loc - максимальное число итераций
             h - шаг для численного вычисления якобиана
         """
+        print(x_start, x_low, x_high, eps_loc, N_loc, h)
+        print(f(x_start))
         loc_history = [x_start.copy()]
         def callback(x):
             loc_history.append(x.copy())
@@ -153,7 +204,7 @@ class Optimizator:
 
         return (x_min.x, loc_history)
 
-    def gradient_descent(f, x_start, x_low: list, x_high: list, learning_rate: float, eps_loc: float, N_loc: int, h: float):
+    def gradient_descent(f, x_start, x_low: list, x_high: list,  N_loc: int, eps_loc: float, h: float, learning_rate: float):
         """
         Реализует метод градиентного спуска с ограничениями.
         Параметры:
@@ -165,6 +216,8 @@ class Optimizator:
             eps_loc - критерий остановки (изменение нормы градиента)
             h - шаг для численного вычисления градиента
         """
+        print(x_start, x_low, x_high, learning_rate, eps_loc, N_loc, h)
+        print(f(x_start))
         x_min = x_start.copy()
         loc_history = [x_min.copy()]
 
@@ -180,8 +233,11 @@ class Optimizator:
         
         for _ in range(N_loc):
             grad = numerical_gradient(f, x_min, h)
+            if _ == 0: print(grad)
             x = x_min - learning_rate * grad
+            if _ == 0: print(x)
             x = np.clip(x, x_low, x_high)
+            if _ == 0: print(x)
             loc_history.append(x.copy())
             if np.linalg.norm(f(x) - f(x_min)) < eps_loc:
                 break
@@ -200,6 +256,8 @@ class Optimizator:
             eps_loc - значение для критерия останова
             h - шаг для численного вычисления градиента
         """
+        print(x_start, x_low, x_high, eps_loc, h)
+        print(f(x_start))
         loc_history = [x_start.copy()]
         def callback(x):
             loc_history.append(x.copy())
