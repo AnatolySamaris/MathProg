@@ -16,17 +16,27 @@ class Optimizator:
             loc_method - метод локальной оптимизацииS
             *args, **kwargs - аргументы метода локальной оптимизации
         """
+        x_low = np.array(x_low)
+        x_high = np.array(x_high)
+
         x_min = np.random.uniform(low=x_low, high=x_high, size=n_vars)
         glob_history = [x_min.copy()]
+        symmetry = True
+        centers = (x_low + x_high) / 2
 
         for _ in range(N):
             x = np.random.uniform(low=x_low, high=x_high, size=n_vars)
             if x_min[0] is None or f(x) < f(x_min):
-                glob_history.append(x_min)
                 x_min = x
+                glob_history.append(x_min)
+            if f(x) - f(2 * centers - x) > 1e-6: symmetry = False
 
         x_min, loc_history = loc_method(f, x_min, x_low, x_high, *args, **kwargs)
-        return (x_min, glob_history, loc_history)
+        if symmetry:
+            if np.all(x_min - centers) < 1e-4: symmetry = None
+            else: symmetry = 2 * centers - x_min
+        else: symmetry = None
+        return (x_min, glob_history, loc_history, symmetry)
     
     def annealing_imitation(f, n_vars: int, x_low: list, x_high: list, T_max: float, L: int, r: float, eps: float, loc_method, *args, **kwargs):
         """
@@ -43,9 +53,14 @@ class Optimizator:
             *args, **kwargs - аргументы метода локальной оптимизации
         """
         T = T_max
+        x_low = np.array(x_low)
+        x_high = np.array(x_high)
 
         x_min = np.random.uniform(low=x_low, high=x_high, size=n_vars)
         glob_history = [x_min.copy()]
+        symmetry = True
+        centers = (x_low + x_high) / 2
+
         while T > eps:
             for _ in range(L):
                 x = x_min + np.random.uniform(low=-eps, high=eps, size=n_vars)
@@ -54,13 +69,18 @@ class Optimizator:
                 if delta <= 0 or np.exp(-delta / T) > np.random.uniform(low=0, high=1): 
                     x_min = x
                     glob_history.append(x_min)
+                if f(x) - f(2 * centers - x) > 1e-6: symmetry = False
             T = r * T
         
         x_min, loc_history = loc_method(f, x_min, x_low, x_high, *args, **kwargs)
-        return (x_min, glob_history, loc_history)
+        if symmetry:
+            if np.all(abs(x_min - centers)) < 1e-4: symmetry = None
+            else: symmetry = 2 * centers - x_min
+        else: symmetry = None
+        return (x_min, glob_history, loc_history, symmetry)
     
 
-    def nelder_mead(f, x_start, x_low: list, x_high: list, eps_loc: float, N_loc: int):
+    def nelder_mead(f, x_start, x_low: list, x_high: list, N_loc: int, eps_loc: float):
         """
         Ищет локальный минимум функции методом Нелдера-Мида.
         В качестве параметров принимает:
@@ -89,7 +109,7 @@ class Optimizator:
 
         return (x_min.x, loc_history)
     
-    def powell(f, x_start, x_low: list, x_high: list, eps_loc: float, N_loc: int):
+    def powell(f, x_start, x_low: list, x_high: list, N_loc: int, eps_loc: float):
         """
         Ищет локальный минимум функции методом Пауэлла.
         В качестве параметров принимает:
@@ -118,7 +138,7 @@ class Optimizator:
 
         return (x_min.x, loc_history)
     
-    def bfgs(f, x_start, x_low: list, x_high: list, eps_loc: float, N_loc: int, h: float):
+    def bfgs(f, x_start, x_low: list, x_high: list, N_loc: int, eps_loc: float, h: float):
         """
         Ищет локальный минимум функции методом L-BFGS-B (поддерживает границы).
         При этом якобиан считается численно.
@@ -148,7 +168,7 @@ class Optimizator:
 
         return (x_min.x, loc_history)
 
-    def gradient_descent(f, x_start, x_low: list, x_high: list, learning_rate: float, eps_loc: float, N_loc: int, h: float):
+    def gradient_descent(f, x_start, x_low: list, x_high: list,  N_loc: int, eps_loc: float, h: float, learning_rate: float):
         """
         Реализует метод градиентного спуска с ограничениями.
         Параметры:
@@ -175,8 +195,11 @@ class Optimizator:
         
         for _ in range(N_loc):
             grad = numerical_gradient(f, x_min, h)
+            if _ == 0: print(grad)
             x = x_min - learning_rate * grad
+            if _ == 0: print(x)
             x = np.clip(x, x_low, x_high)
+            if _ == 0: print(x)
             loc_history.append(x.copy())
             if np.linalg.norm(f(x) - f(x_min)) < eps_loc:
                 break

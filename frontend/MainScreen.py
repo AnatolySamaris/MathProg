@@ -40,7 +40,7 @@ class DoubleValidatorDelegate(QStyledItemDelegate):
         return editor
     
 class CalculationThread(QThread):
-    finished = pyqtSignal(object, object, object)  # Сигнал для передачи результатов расчета
+    finished = pyqtSignal(object, object, object, object)  # Добавлен четвертый аргумент для symmetry
 
     def __init__(self, func, n_vars, lower_x, upper_x, glob_method, loc_method, glob_params, loc_params):
         super().__init__()
@@ -57,27 +57,27 @@ class CalculationThread(QThread):
         try:
             if self.glob_method == "Метод Монте-Карло":
                 if self.loc_method == "Метод Нелдера-Мида":
-                    min_point, global_history, local_history = Optimizator.monte_karlo(
+                    min_point, global_history, local_history, symmetry = Optimizator.monte_karlo(
                         self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.nelder_mead,
                         *self.loc_params
                     )
                 elif self.loc_method == "Метод Пауэлла":
-                    min_point, global_history, local_history = Optimizator.monte_karlo(
+                    min_point, global_history, local_history, symmetry = Optimizator.monte_karlo(
                         self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.powell,
                         *self.loc_params
                     )
                 elif self.loc_method == "Метод Ньютона":
-                    min_point, global_history, local_history = Optimizator.monte_karlo(
+                    min_point, global_history, local_history, symmetry = Optimizator.monte_karlo(
                         self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.tnc,
                         *self.loc_params
                     )
                 elif self.loc_method == "BFGS":
-                    min_point, global_history, local_history = Optimizator.monte_karlo(
+                    min_point, global_history, local_history, symmetry = Optimizator.monte_karlo(
                         self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.bfgs,
                         *self.loc_params
                     )
                 elif self.loc_method == "Градиентный спуск":
-                    min_point, global_history, local_history = Optimizator.monte_karlo(
+                    min_point, global_history, local_history, symmetry = Optimizator.monte_karlo(
                         self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.gradient_descent,
                         *self.loc_params
                     )
@@ -85,37 +85,38 @@ class CalculationThread(QThread):
                     return
             elif self.glob_method == "Метод имитации отжига":
                 if self.loc_method == "Метод Нелдера-Мида":
-                    min_point, global_history, local_history = Optimizator.annealing_imitation(
+                    min_point, global_history, local_history, symmetry = Optimizator.annealing_imitation(
                         self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.nelder_mead,
                         *self.loc_params
                     )
                 elif self.loc_method == "Метод Пауэлла":
-                    min_point, global_history, local_history = Optimizator.annealing_imitation(
+                    min_point, global_history, local_history, symmetry = Optimizator.annealing_imitation(
                         self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.powell,
                         *self.loc_params
                     )
                 elif self.loc_method == "Метод Ньютона":
-                    min_point, global_history, local_history = Optimizator.annealing_imitation(
+                    min_point, global_history, local_history, symmetry = Optimizator.annealing_imitation(
                         self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.tnc,
                         *self.loc_params
                     )
                 elif self.loc_method == "BFGS":
-                    min_point, global_history, local_history = Optimizator.annealing_imitation(
+                    min_point, global_history, local_history, symmetry = Optimizator.annealing_imitation(
                         self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.bfgs,
                         *self.loc_params
                     )
                 elif self.loc_method == "Градиентный спуск":
-                    min_point, global_history, local_history = Optimizator.annealing_imitation(
+                    min_point, global_history, local_history, symmetry = Optimizator.annealing_imitation(
                         self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.gradient_descent,
                         *self.loc_params
                     )
                 else:
                     return
         except Exception as e:
-            self.finished.emit(None, None, None)
+            print("FUNC EXCEPTION: ", e)
+            self.finished.emit(None, None, None, None)  # Добавлен четвертый аргумент
             return
 
-        self.finished.emit(min_point, global_history, local_history)
+        self.finished.emit(min_point, global_history, local_history, symmetry)  # Передаем symmetry
 
 class MainScreen(QMainWindow):
     def __init__(self):
@@ -389,6 +390,17 @@ class MainScreen(QMainWindow):
         self.result_point.setStyleSheet("font-size: 18px;")
         self.result_point.hide()
         results_layout.addWidget(self.result_point)
+
+        self.result_symmetry_label = QLabel()
+        self.result_symmetry_label.setStyleSheet("font-size: 18px;")
+        self.result_symmetry_label.hide()
+        results_layout.addWidget(self.result_symmetry_label)
+
+        self.symmetry_result_point = QLabel()
+        self.symmetry_result_point.setText("")
+        self.symmetry_result_point.setStyleSheet("font-size: 18px;")
+        self.symmetry_result_point.hide()
+        results_layout.addWidget(self.symmetry_result_point)
         
         # Добавляем вертикальный отступ чтобы прижать все элементы к верху
         results_layout.addStretch()
@@ -556,6 +568,12 @@ class MainScreen(QMainWindow):
         self.result_point.setText("")
         self.result_point.hide()
 
+        self.result_symmetry_label.setText("")
+        self.result_symmetry_label.hide()
+
+        self.symmetry_result_point.setText("")
+        self.symmetry_result_point.hide()
+
         self.error_message_label.setText("")
 
         self.graph_figure.clear()
@@ -663,15 +681,18 @@ class MainScreen(QMainWindow):
             self.glob_methods.currentText(), self.loc_methods.currentText(),
             glob_params, loc_params
         )
-        self.calculation_thread.finished.connect(self.on_calculation_finished)
+        self.calculation_thread.finished.connect(
+            lambda min_point, global_history, local_history, symmetry: self.on_calculation_finished(min_point, global_history, local_history, symmetry)
+        )
         self.calculation_thread.start()
 
-    def on_calculation_finished(self, min_point, global_history, local_history):
+    def on_calculation_finished(self, min_point, global_history, local_history, symmetry):
         # Останавливаем таймер
         self.timer.stop()
 
         if min_point is None:
             self.error_message_label.setText("Ошибка при расчете. Проверьте вводные данные.")
+            print("Min point is None")
             return
 
         # Получаем результаты
@@ -688,6 +709,12 @@ class MainScreen(QMainWindow):
         self.result_point_label.show()
         self.result_point.setText(f"({'; '.join(vars)}) = ({'; '.join(map(lambda x: str(round(x, 6)), min_point))})")
         self.result_point.show()
+
+        if symmetry is not None:
+            self.result_symmetry_label.setText("<b>Функция симметрична => имеет также минимум в точке:</b>")
+            self.result_symmetry_label.show()
+            self.symmetry_result_point.setText(f"({'; '.join(vars)}) = ({'; '.join(map(lambda x: str(round(x, 6)), symmetry))})")
+            self.symmetry_result_point.show()
 
         # Рисуем график
         global_history_length = len(global_history)
@@ -709,4 +736,3 @@ class MainScreen(QMainWindow):
     def update_time_label(self):
         self.elapsed_time = time() - self.start_time
         self.result_time_label.setText(f"<b>Время работы алгоритма:</b> {round(self.elapsed_time, 4)} сек")
-        # QApplication.processEvents()  # Принудительное обновление интерфейса
