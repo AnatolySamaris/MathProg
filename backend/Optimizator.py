@@ -33,7 +33,7 @@ class Optimizator:
 
         x_min, loc_history = loc_method(f, x_min, x_low, x_high, *args, **kwargs)
         if symmetry:
-            if np.all(x_min - centers) < 1e-4: symmetry = None
+            if np.all(abs(x_min - centers) < 1): symmetry = None
             else: symmetry = 2 * centers - x_min
         else: symmetry = None
         return (x_min, glob_history, loc_history, symmetry)
@@ -74,7 +74,7 @@ class Optimizator:
         
         x_min, loc_history = loc_method(f, x_min, x_low, x_high, *args, **kwargs)
         if symmetry:
-            if np.all(abs(x_min - centers)) < 1e-4: symmetry = None
+            if np.all(abs(x_min - centers) < 1): symmetry = None
             else: symmetry = 2 * centers - x_min
         else: symmetry = None
         return (x_min, glob_history, loc_history, symmetry)
