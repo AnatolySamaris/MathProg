@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.optimize import minimize
+from GeneticAlgorithm import GeneticAlgorithm
 
 class Optimizator:
     def __init__(self):
@@ -78,6 +79,12 @@ class Optimizator:
             else: symmetry = 2 * centers - x_min
         else: symmetry = None
         return (x_min, glob_history, loc_history, symmetry)
+
+    def genetic_algorithm(f, n_vars: int, x_low: list, x_high: list, k0: int, eps: float, loc_method, *args):
+        ga = GeneticAlgorithm(k0, eps)
+        x_min, glob_history = ga.solve(f, n_vars, x_low, x_high)
+        x_min, loc_history = loc_method(f, x_min, x_low, x_high, *args)
+        return (x_min, glob_history, loc_history)
     
 
     def nelder_mead(f, x_start, x_low: list, x_high: list, N_loc: int, eps_loc: float):
