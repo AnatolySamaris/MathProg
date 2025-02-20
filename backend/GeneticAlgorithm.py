@@ -1,45 +1,74 @@
 import numpy as np
 
 class GeneticAlgorithm:
-    def __init__(self, k0: int, h: float, n: int, eps: float, x_low: float, x_high: float, f, n_vars: int):
+    def __init__(self, k0: int, h: float, n: int, eps: float, p: float):
         """
         k0 - размер исходной популяции
         h - ширина интервала для кодирования
         n - масимальное число поколений
         eps - точность для критерия останова
+        p - вероятность мутации
+        gene - номер гена, который менять при мутации
         """
         self.k0 = k0
         self.h = h
         self.n = n
         self.eps = eps
-        self.x_low = x_low
-        self.x_high = x_high
-        self.f = f
-        self.n_vars = n_vars
+        self.p = p
         self.x_max_len = None
-
     
-    def solve(self, func, n_vars, x_low, x_high) -> list:
+    def solve(self, f, n_vars: int, x_low: float, x_high: float, stopping_criteria: str) -> list:
         """
+        Выполняет генетический алгоритм
         return: x_min, glob_history
         """
+        # максимальная длина особи
         self.x_max_len = self.__find_max_len(x_low, x_high)
-        # ...
+        # начальная популяция
+        population = self.__create_population(x_low=x_low, x_high=x_high, n_vars=n_vars)
 
-    def __create_population(self):
-        start_population = np.random.uniform(low=self.x_low, high=self.x_high, size=(self.k0, self.n_vars))
-        encoded_population = [self.__encode_point(x) for x in start_population]
-        return encoded_population
+        # повторяем алгоритм до тех пор, пока не достигнем нужного числа поколений
+        for _ in range(self.n):
+            if _ > 0: population = new_population
+            pairs = self.__selection(population=population, f=f, n_vars=n_vars, x_low=x_low)
+            children = self.__crossingover(pairs=pairs, length=self.x_max_len, type='single_point') # тип можно менять
+            mutation_children = self.__mutation(children=children, length=self.x_max_len)
+            new_population = self.__reduction(population=population, children=mutation_children, n_vars=n_vars, x_low=x_low)
 
-    def __selection(self, population):
-        # properties = []
+            if stopping_criteria == 'one_generation':
+                f_values = [f(x) for x in new_population]
+                if max(f_values) - min(f_values) < self.eps:
+                    break
+            elif stopping_criteria == 'two_generations':
+                f_max_old = max([f(x) for x in population])
+                f_max_new = max([f(x) for x in new_population])
+                if abs(f_max_new - f_max_old) < self.eps:
+                    break
+
+        # выбор лучшей особи в конечной популяции
+        best_individual = max([f(x) for x in population])
+
+        return best_individual
+
+    def __create_population(self, x_low: float, x_high: float, n_vars: int) -> list:
+        """
+        Создает начальную популяцию.
+        """
+        start_population = np.random.uniform(low=x_low, high=x_high, size=(self.k0, n_vars))
+        encode_population = [self.__encode_point(x, x_low, x_high) for x in start_population]
+        return encode_population
+
+    def __selection(self, population: list, f, n_vars: int, x_low: float) -> list:
+        """
+        Выполняет выбор пар для скрещивания.
+        """
         intervals = [0]
-        decode_population = [self.__decode_point(x) for x in population]
-        f_arr = [self.f(x) for x in decode_population]
-        f_max = max(f_arr)
-        f_sum = sum(f_arr)
+        decode_population = [self.__decode_point(x, n_vars, x_low) for x in population]
+        f_values = [f(x) for x in decode_population]
+        f_max = max(f_values)
+        f_sum = sum(f_values)
         for x in decode_population:
-            p = (f_max - self.f(x) + 1) / ((self.k0 * (f_max + 1)) - f_sum)
+            p = (f_max - f(x) + 1) / ((self.k0 * (f_max + 1)) - f_sum)
             intervals.append(intervals[-1] + p)
 
         pairs = []
@@ -52,22 +81,60 @@ class GeneticAlgorithm:
                     break
         return pairs
 
-    def __crossingover(self, pairs, length):
+    def __crossingover(self, pairs: list, length: int, type: str) -> list:
+        """
+        Выполняет скрещивание и возвращает список новых особей.
+        """
         children = []
-        for i in range(len(pairs)): 
-            l = np.random.randint(1, length-1) 
-            # children.append([])
-            # children[i].append(pairs[i][0][:l] + pairs[i][1][l:])
-            # children[i].append(pairs[i][1][:l] + pairs[i][0][l:])
-            children.append(pairs[i][0][:l] + pairs[i][1][l:])
-            children.append(pairs[i][1][:l] + pairs[i][0][l:])
+        for i in range(len(pairs)):
+            if type == 'single_point':
+                l = np.random.randint(1, length-1) 
+                children.append(pairs[i][0][:l] + pairs[i][1][l:])
+                children.append(pairs[i][1][:l] + pairs[i][0][l:])
+            elif type == 'two_point':
+                l1 = np.random.randint(1, length-1)
+                l2 = np.random.randint(1, length-1)
+                min_point = min([l1, l2])
+                max_point = max([l1, l2])
+                children.append(pairs[i][0][:min_point] + pairs[i][1][min_point : max_point] + pairs[i][0][max_point:])
+                children.append(pairs[i][1][:min_point] + pairs[i][0][min_point : max_point] + pairs[i][1][max_point:])
+            elif type == 'uniform':
+                child1 = ''
+                child2 = ''
+                for bit in length:
+                    bit_property_child1 = np.random.uniform(0, 1)
+                    if bit_property_child1 < 0.5:
+                        child1 += pairs[i][0][bit]
+                    else:
+                        child1 += pairs[i][1][bit]
+                    bit_property_child2 = np.random.uniform(0, 1)
+                    if bit_property_child2 < 0.5:
+                        child2 += pairs[i][0][bit]
+                    else:
+                        child2 += pairs[i][1][bit]
+                children.append(child1)
+                children.append(child2)
         return children
 
-    def __mutation(self):
-        pass
+    def __mutation(self, children: list, length: int) -> list:
+        """
+        Выполняет мутацию некоторых новых особей.
+        """
+        mutation_children = children.copy()
+        for child in mutation_children:
+            random_number = np.random.uniform(0, 1)
+            if random_number <= self.p:
+                gene = np.random.randint(0, length)
+                child[gene] = 1 - child[gene]
+        return mutation_children
 
-    def __reduction(self):
-        pass 
+    def __reduction(self, population: list, children: list, n_vars: int, x_low: float) -> list:
+        """
+        Выполняет редукцию и возвращает измененную популяцию.
+        """
+        new_population = population + children
+        new_population.sort(key=lambda x: self.f(self.__decode_point(x, n_vars, x_low)), reverse=True)
+        return new_population[:self.k0]
 
     def __dec2gray(self, dec):
         return dec ^ (dec >> 1)
@@ -80,11 +147,11 @@ class GeneticAlgorithm:
             mask >>= 1
         return dec
 
-    def __encode_point(self, point: list):  # массив вещественных чисел
+    def __encode_point(self, x_low, x_high, point: list):  # массив вещественных чисел
         intervals_point = []
         for i, x in enumerate(point):
-            for hi in range(0, np.ceil((self.x_high[i] - self.x_low[i]) / self.h)):
-                if (self.x_low + hi * self.h) <= x <= (self.x_low + (hi + 1) * self.h):
+            for hi in range(0, np.ceil((x_high[i] - x_low[i]) / self.h)):
+                if (x_low + hi * self.h) <= x <= (x_low + (hi + 1) * self.h):
                     intervals_point.append(hi)
         encoded_point = ""
         for x in intervals_point:
@@ -92,9 +159,9 @@ class GeneticAlgorithm:
             encoded_point += "0" * (self.x_max_len - len(enc_x)) + enc_x
         return encoded_point
 
-    def __decode_point(self, point):
+    def __decode_point(self, point, n_vars, x_low):
         len_point = len(point)
-        split_step = len_point // self.n_vars
+        split_step = len_point // n_vars
         point_intervals = []
         for i in range(0, len_point, split_step):
             point_intervals.append(
@@ -102,8 +169,8 @@ class GeneticAlgorithm:
             )
         point_values = []
         for i, xi in enumerate(point_values):
-            left_xi_value = self.x_low[i] + xi * self.h
-            right_xi_value = self.x_low[i] + xi * (self.h + 1)
+            left_xi_value = x_low[i] + xi * self.h
+            right_xi_value = x_low[i] + xi * (self.h + 1)
             point_values.append(
                 (left_xi_value + right_xi_value) / 2
             )
