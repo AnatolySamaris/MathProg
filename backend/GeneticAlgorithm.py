@@ -30,8 +30,8 @@ class GeneticAlgorithm:
         # повторяем алгоритм до тех пор, пока не достигнем нужного числа поколений
         for _ in range(self.n):
             if _ > 0: population = new_population
-            pairs = self.__selection(population=population, f=f, n_vars=n_vars, x_low=x_low, x_high=x_high)
-            children = self.__crossingover(pairs=pairs, length=self.x_max_len)
+            pairs = self.__selection(population=population, f=f, n_vars=n_vars, x_low=x_low)
+            children = self.__crossingover(pairs=pairs, length=self.x_max_len, type='single_point') # тип можно менять
             mutation_children = self.__mutation(children=children, length=self.x_max_len)
             new_population = self.__reduction(population=population, children=mutation_children, n_vars=n_vars, x_low=x_low)
 
@@ -87,7 +87,7 @@ class GeneticAlgorithm:
         """
         children = []
         for i in range(len(pairs)):
-            if type == 'single_pont':
+            if type == 'single_point':
                 l = np.random.randint(1, length-1) 
                 children.append(pairs[i][0][:l] + pairs[i][1][l:])
                 children.append(pairs[i][1][:l] + pairs[i][0][l:])
