@@ -1,7 +1,7 @@
 import numpy as np
 
 class GeneticAlgorithm:
-    def __init__(self, k0: int, h: float, n: int, eps: float, x_low: float, x_high: float, f):
+    def __init__(self, k0: int, h: float, n: int, eps: float, x_low: float, x_high: float, f, n_vars: int):
         """
         k0 - размер исходной популяции
         h - ширина интервала для кодирования
@@ -15,18 +15,21 @@ class GeneticAlgorithm:
         self.x_low = x_low
         self.x_high = x_high
         self.f = f
+        self.n_vars = n_vars
+        self.x_max_len = None
 
     
-    def solve(self, func) -> list:
+    def solve(self, func, n_vars, x_low, x_high) -> list:
         """
         return: x_min, glob_history
         """
-        pass
+        self.x_max_len = self.__find_max_len(x_low, x_high)
+        # ...
 
     def __create_population(self):
-        start_population = np.random.uniform(low=self.x_low, high=self.x_high, size=self.k0)
-        encode_population = [self.__encode_point(x) for x in start_population]
-        return encode_population
+        start_population = np.random.uniform(low=self.x_low, high=self.x_high, size=(self.k0, self.n_vars))
+        encoded_population = [self.__encode_point(x) for x in start_population]
+        return encoded_population
 
     def __selection(self, population):
         # properties = []
@@ -66,14 +69,53 @@ class GeneticAlgorithm:
     def __reduction(self):
         pass 
 
-    def __bit2grey(self):   # Анатолий
-        pass 
+    def __dec2gray(self, dec):
+        return dec ^ (dec >> 1)
 
-    def __grey2bit(self):   # Толя
-        pass
+    def __gray2dec(self, gray):
+        dec = gray
+        mask = dec >> 1
+        while mask != 0:
+            dec ^= mask
+            mask >>= 1
+        return dec
 
-    def __encode_point(self):   # Толян
-        pass
+    def __encode_point(self, point: list):  # массив вещественных чисел
+        intervals_point = []
+        for i, x in enumerate(point):
+            for hi in range(0, np.ceil((self.x_high[i] - self.x_low[i]) / self.h)):
+                if (self.x_low + hi * self.h) <= x <= (self.x_low + (hi + 1) * self.h):
+                    intervals_point.append(hi)
+        encoded_point = ""
+        for x in intervals_point:
+            enc_x = bin(self.__dec2gray(x))[2:]
+            encoded_point += "0" * (self.x_max_len - len(enc_x)) + enc_x
+        return encoded_point
 
-    def __decode_point(self):   # Толик
-        pass
+    def __decode_point(self, point):
+        len_point = len(point)
+        split_step = len_point // self.n_vars
+        point_intervals = []
+        for i in range(0, len_point, split_step):
+            point_intervals.append(
+                point[i*split_step : (i+1)*split_step]
+            )
+        point_values = []
+        for i, xi in enumerate(point_values):
+            left_xi_value = self.x_low[i] + xi * self.h
+            right_xi_value = self.x_low[i] + xi * (self.h + 1)
+            point_values.append(
+                (left_xi_value + right_xi_value) / 2
+            )
+        return point_values
+    
+    def __find_max_len(self, x_low, x_high) -> int:
+        """
+        Расчет максимальной длины числа в коде Грея
+        """
+        assert len(x_low) == len(x_high), "Ограничения заданы некорректно!"
+        max_val = np.max([np.ceil((x_high[i] - x_low[i]) / self.h) 
+                       for i in range(len(x_low))])
+        max_val_gray = bin(self.__dec2gray(max_val))[2:]
+        return len(max_val_gray)
+
