@@ -15,24 +15,25 @@ class GeneticAlgorithm:
         self.n = n
         self.eps = eps
         self.p = p
+        self.x_max_len = None
     
     def solve(self, f, n_vars: int, x_low: float, x_high: float, stopping_criteria: str) -> list:
         """
         Выполняет генетический алгоритм
         return: x_min, glob_history
         """
+        # максимальная длина особи
+        self.x_max_len = self.__find_max_len(x_low, x_high)
         # начальная популяция
         population = self.__create_population(x_low=x_low, x_high=x_high, n_vars=n_vars)
-        # длина особи
-        individual_length = len(population[0])
 
         # повторяем алгоритм до тех пор, пока не достигнем нужного числа поколений
         for _ in range(self.n):
             if _ > 0: population = new_population
-            pairs = self.__selection(population=population, f=f)
-            children = self.__crossingover(pairs=pairs, length=individual_length)
-            mutation_children = self.__mutation(children=children, length=individual_length)
-            new_population = self.__reduction(population=population, children=mutation_children)
+            pairs = self.__selection(population=population, f=f, n_vars=n_vars, x_low=x_low, x_high=x_high)
+            children = self.__crossingover(pairs=pairs, length=self.x_max_len)
+            mutation_children = self.__mutation(children=children, length=self.x_max_len)
+            new_population = self.__reduction(population=population, children=mutation_children, n_vars=n_vars, x_low=x_low)
 
             if stopping_criteria == 'one_generation':
                 f_values = [f(x) for x in new_population]
@@ -49,20 +50,20 @@ class GeneticAlgorithm:
 
         return best_individual
 
-    def __create_population(self, x_low, x_high, n_vars):
+    def __create_population(self, x_low: float, x_high: float, n_vars: int) -> list:
         """
         Создает начальную популяцию.
         """
         start_population = np.random.uniform(low=x_low, high=x_high, size=(self.k0, n_vars))
-        encode_population = [self.__encode_point(x) for x in start_population]
+        encode_population = [self.__encode_point(x, x_low, x_high) for x in start_population]
         return encode_population
 
-    def __selection(self, population, f):
+    def __selection(self, population: list, f, n_vars: int, x_low: float) -> list:
         """
         Выполняет выбор пар для скрещивания.
         """
         intervals = [0]
-        decode_population = [self.__decode_point(x) for x in population]
+        decode_population = [self.__decode_point(x, n_vars, x_low) for x in population]
         f_values = [f(x) for x in decode_population]
         f_max = max(f_values)
         f_sum = sum(f_values)
@@ -80,7 +81,7 @@ class GeneticAlgorithm:
                     break
         return pairs
 
-    def __crossingover(self, pairs, length, type):
+    def __crossingover(self, pairs: list, length: int, type: str) -> list:
         """
         Выполняет скрещивание и возвращает список новых особей.
         """
@@ -115,7 +116,7 @@ class GeneticAlgorithm:
                 children.append(child2)
         return children
 
-    def __mutation(self, children, length):
+    def __mutation(self, children: list, length: int) -> list:
         """
         Выполняет мутацию некоторых новых особей.
         """
@@ -127,22 +128,61 @@ class GeneticAlgorithm:
                 child[gene] = 1 - child[gene]
         return mutation_children
 
-    def __reduction(self, population, children):
+    def __reduction(self, population: list, children: list, n_vars: int, x_low: float) -> list:
         """
         Выполняет редукцию и возвращает измененную популяцию.
         """
         new_population = population + children
-        new_population.sort(key=lambda x: self.f(self.__decode_point(x)), reverse=True)
+        new_population.sort(key=lambda x: self.f(self.__decode_point(x, n_vars, x_low)), reverse=True)
         return new_population[:self.k0]
 
-    def __bit2grey(self):   # Анатолий
-        pass 
+    def __dec2gray(self, dec):
+        return dec ^ (dec >> 1)
 
-    def __grey2bit(self):   # Толя
-        pass
+    def __gray2dec(self, gray):
+        dec = gray
+        mask = dec >> 1
+        while mask != 0:
+            dec ^= mask
+            mask >>= 1
+        return dec
 
-    def __encode_point(self):   # Толян
-        pass
+    def __encode_point(self, x_low, x_high, point: list):  # массив вещественных чисел
+        intervals_point = []
+        for i, x in enumerate(point):
+            for hi in range(0, np.ceil((x_high[i] - x_low[i]) / self.h)):
+                if (x_low + hi * self.h) <= x <= (x_low + (hi + 1) * self.h):
+                    intervals_point.append(hi)
+        encoded_point = ""
+        for x in intervals_point:
+            enc_x = bin(self.__dec2gray(x))[2:]
+            encoded_point += "0" * (self.x_max_len - len(enc_x)) + enc_x
+        return encoded_point
 
-    def __decode_point(self):   # Толик
-        pass
+    def __decode_point(self, point, n_vars, x_low):
+        len_point = len(point)
+        split_step = len_point // n_vars
+        point_intervals = []
+        for i in range(0, len_point, split_step):
+            point_intervals.append(
+                point[i*split_step : (i+1)*split_step]
+            )
+        point_values = []
+        for i, xi in enumerate(point_values):
+            left_xi_value = x_low[i] + xi * self.h
+            right_xi_value = x_low[i] + xi * (self.h + 1)
+            point_values.append(
+                (left_xi_value + right_xi_value) / 2
+            )
+        return point_values
+    
+    def __find_max_len(self, x_low, x_high) -> int:
+        """
+        Расчет максимальной длины числа в коде Грея
+        """
+        assert len(x_low) == len(x_high), "Ограничения заданы некорректно!"
+        max_val = np.max([np.ceil((x_high[i] - x_low[i]) / self.h) 
+                       for i in range(len(x_low))])
+        max_val_gray = bin(self.__dec2gray(max_val))[2:]
+        return len(max_val_gray)
+
