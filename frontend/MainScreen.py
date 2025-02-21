@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QDialog, QTextEdit,
-    QVBoxLayout, QHBoxLayout, QLabel, 
+    QVBoxLayout, QHBoxLayout, QLabel, QAction,
     QDesktopWidget, QFrame, QLineEdit, 
     QComboBox, QTableWidget, QTableWidgetItem, 
     QSizePolicy, QHeaderView, QPushButton, QStyledItemDelegate
@@ -18,6 +18,8 @@ from matplotlib.figure import Figure
 
 import numpy as np
 
+from frontend.HelpWindow import HelpWindow
+from frontend.TestFunctionsWindow import TestFunctionsWindow
 from frontend.ConstraintsDialog import ConstraintsDialog
 
 from backend.Function import Function
@@ -161,6 +163,16 @@ class MainScreen(QMainWindow):
         self.setGeometry(150, 150, self.width, self.height)
         self.setStyleSheet(f"background-color: {self.background_color};")
         self.center()
+
+        helpAction = QAction("&Справка", self)
+        helpAction.triggered.connect(self.showHelpMenu)
+
+        testFunctionsAction = QAction("&Тестовые задачи", self)
+        testFunctionsAction.triggered.connect(self.showTestFunctionsMenu)
+
+        self.menubar = self.menuBar()
+        self.menubar.addAction(helpAction)
+        self.menubar.addAction(testFunctionsAction)
 
         # Инициализация таймера
         self.timer = QTimer()
@@ -477,6 +489,14 @@ class MainScreen(QMainWindow):
         cp = QDesktopWidget().availableGeometry().center()
         qr.moveCenter(cp)
         self.move(qr.topLeft())
+
+    def showHelpMenu(self):
+        help_window = HelpWindow(self)
+        help_window.show()
+
+    def showTestFunctionsMenu(self):
+        mode_window = TestFunctionsWindow(self)
+        mode_window.show()
 
     def open_constraints_dialog(self):
         try:
