@@ -38,11 +38,8 @@ class GeneticAlgorithm:
             children = self.__crossingover(pairs=pairs, type='single_point') # тип можно менять
             mutation_children = self.__mutation(children=children)
             new_population = self.__reduction(population=population, children=mutation_children, n_vars=n_vars, x_low=x_low, f=f)
-            print('NEW_POPULATION', new_population)
 
-            # glob_history.append(min([f(x) for x in new_population]))
             f_values = [f(self.__decode_point(x, n_vars, x_low)) for x in new_population]
-            print('f_values', f_values)
             decoded_points = [self.__decode_point(x, n_vars, x_low) for x in new_population]
             f_min_new = min(f_values)
             min_point = decoded_points[f_values.index(f_min_new)]
@@ -57,19 +54,6 @@ class GeneticAlgorithm:
                 f_min_old = min([f(self.__decode_point(x, n_vars, x_low)) for x in population])
                 if abs(f_min_new - f_min_old) < self.eps:
                     break
-
-        # выбор лучшей особи в конечной популяции
-        # f_values = [f(self.__decode_point(x, n_vars, x_low)) for x in new_population]
-        # decoded_points = [self.__decode_point(x, n_vars, x_low) for x in new_population]
-        # print('f_values', f_values)
-        # best_f = min(f_values)
-        # print('best_f', best_f)
-        # best_individual_index = f_values.index(best_f)
-        # print('index', best_individual_index)
-        # best_individual = decoded_points[best_individual_index]
-        # print('best_ind', best_individual)
-        
-        # print('history', glob_history)
 
         return glob_history[-1], glob_history
 
@@ -91,17 +75,13 @@ class GeneticAlgorithm:
         Выполняет выбор пар для скрещивания.;
         """
         intervals = [0]
-        print("POPULATION", population)
         decode_population = [self.__decode_point(x, n_vars, x_low) for x in population]
-        print(decode_population)
         f_values = [f(x) for x in decode_population]
         f_max = max(f_values)
         f_sum = sum(f_values)
         for x in decode_population:
             p = (f_max - f(x) + 1) / ((self.k0 * (f_max + 1)) - f_sum)
-            print('p', p)
             intervals.append(intervals[-1] + p)
-        print('INTERVALS', intervals)
 
         pairs = []
         number_of_parents = len(population)
@@ -109,14 +89,10 @@ class GeneticAlgorithm:
         for i in range(number_of_parents):
             if i % 2 == 0: pairs.append([])
             random_number = np.random.uniform(0, 1)
-            print('random', random_number)
             for j in range(len(intervals) - 1):
                 if random_number >= intervals[j] and random_number < intervals[j+1]:
-                    print('i', i)
-                    print('len_pairs', len(pairs))
                     pairs[i//2].append(population[j])
                     break
-        print('PAIRS1', pairs)
         return pairs
 
     def __crossingover(self, pairs: list, type: str) -> list:
@@ -124,11 +100,9 @@ class GeneticAlgorithm:
         Выполняет скрещивание и возвращает список новых особей.
         """
         children = []
-        print("PAIRS", pairs)
         for i in range(len(pairs)):
             if type == 'single_point':
                 l = np.random.randint(1, self.x_max_len - 1)
-                print(l)
                 children.append(pairs[i][0][:l] + pairs[i][1][l:])
                 children.append(pairs[i][1][:l] + pairs[i][0][l:])
             elif type == 'two_point':
