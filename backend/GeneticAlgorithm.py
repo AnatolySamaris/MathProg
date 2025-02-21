@@ -27,9 +27,9 @@ class GeneticAlgorithm:
         # максимальная длина особи
         self.x_max_len = self.__find_max_len(x_low, x_high)
         # начальная популяция
-        population, start_min_value = self.__create_population(x_low=x_low, x_high=x_high, n_vars=n_vars, func=f)
+        population, start_min_point = self.__create_population(x_low=x_low, x_high=x_high, n_vars=n_vars, func=f)
 
-        glob_history = [start_min_value]
+        glob_history = [start_min_point]
 
         # повторяем алгоритм до тех пор, пока не достигнем нужного числа поколений
         for _ in range(self.n):
