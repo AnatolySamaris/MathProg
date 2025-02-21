@@ -54,7 +54,7 @@ class CalculationThread(QThread):
         self.loc_params = loc_params
 
     def run(self):
-        # try:
+        try:
             if self.glob_method == "Метод Монте-Карло":
                 if self.loc_method == "Метод Нелдера-Мида":
                     min_point, global_history, local_history, symmetry = Optimizator.monte_karlo(
@@ -139,12 +139,12 @@ class CalculationThread(QThread):
                     )
                 else:
                     return
-        # except Exception as e:
-        #     print("FUNC EXCEPTION: ", e)
-        #     self.finished.emit(None, None, None, None)  # Добавлен четвертый аргумент
-        #     return
+        except Exception as e:
+            print("FUNC EXCEPTION: ", e)
+            self.finished.emit(None, None, None, None)  # Добавлен четвертый аргумент
+            return
 
-            self.finished.emit(min_point, global_history, local_history, symmetry)  # Передаем symmetry
+        self.finished.emit(min_point, global_history, local_history, symmetry)  # Передаем symmetry
 
 class MainScreen(QMainWindow):
     def __init__(self):
@@ -656,11 +656,15 @@ class MainScreen(QMainWindow):
             return
         
         # Получаем ограничения по xi
-        lower_x = []
-        upper_x = []
-        for x in self.func.get_vars():
-            lower_x.append(self.constraints[x][0])
-            upper_x.append(self.constraints[x][1])
+        try:
+            lower_x = []
+            upper_x = []
+            for x in self.func.get_vars():
+                lower_x.append(self.constraints[x][0])
+                upper_x.append(self.constraints[x][1])
+        except Exception as e:
+            self.error_message_label.setText("Неправильно заданы ограничения!")
+            return
 
         # Получаем инициализирующие переменные из таблицы глобальной оптимизации
         glob_params = []
