@@ -35,26 +35,27 @@ class GeneticAlgorithm:
         for _ in range(self.n):
             if _ > 0: population = new_population
             pairs = self.__selection(population=population, f=f, n_vars=n_vars, x_low=x_low)
-            children = self.__crossingover(pairs=pairs, length=self.x_max_len, type='single_point') # тип можно менять
-            mutation_children = self.__mutation(children=children, length=self.x_max_len)
-            new_population = self.__reduction(population=population, children=mutation_children, n_vars=n_vars, x_low=x_low)
+            children = self.__crossingover(pairs=pairs, type='single_point') # тип можно менять
+            mutation_children = self.__mutation(children=children)
+            new_population = self.__reduction(population=population, children=mutation_children, n_vars=n_vars, x_low=x_low, f=f)
 
-            glob_history.append(max([f(x) for x in new_population]))
+            f_values = [f(self.__decode_point(x, n_vars, x_low)) for x in new_population]
+            decoded_points = [self.__decode_point(x, n_vars, x_low) for x in new_population]
+            f_min_new = min(f_values)
+            min_point = decoded_points[f_values.index(f_min_new)]
+            glob_history.append(min_point)
 
             if stopping_criteria == 'one_generation':
-                f_values = [f(x) for x in new_population]
-                if max(f_values) - min(f_values) < self.eps:
+                f_max_new = max(f_values)
+                min_point = decoded_points[f_values.index(f_min_new)]
+                if f_max_new - f_min_new < self.eps:
                     break
             elif stopping_criteria == 'two_generations':
-                f_max_old = max([f(x) for x in population])
-                f_max_new = max([f(x) for x in new_population])
-                if abs(f_max_new - f_max_old) < self.eps:
+                f_min_old = min([f(self.__decode_point(x, n_vars, x_low)) for x in population])
+                if abs(f_min_new - f_min_old) < self.eps:
                     break
 
-        # выбор лучшей особи в конечной популяции
-        best_individual = max([f(x) for x in population])
-
-        return best_individual, glob_history
+        return glob_history[-1], glob_history
 
     def __create_population(self, x_low: float, x_high: float, n_vars: int, func) -> list:
         """
@@ -62,17 +63,19 @@ class GeneticAlgorithm:
         """
         start_population = np.random.uniform(low=x_low, high=x_high, size=(self.k0, n_vars))
         encode_population = [self.__encode_point(x, x_low, x_high) for x in start_population]
+
+        f_values = [func(x) for x in start_population]
         start_min_value = np.min(np.array([func(x) for x in start_population])) # Для истории
-        return encode_population, start_min_value
+        start_min_point = start_population[f_values.index(start_min_value)]
+
+        return encode_population, start_min_point
 
     def __selection(self, population: list, f, n_vars: int, x_low: float) -> list:
         """
         Выполняет выбор пар для скрещивания.;
         """
         intervals = [0]
-        print("POPULATION", population)
         decode_population = [self.__decode_point(x, n_vars, x_low) for x in population]
-        print(decode_population)
         f_values = [f(x) for x in decode_population]
         f_max = max(f_values)
         f_sum = sum(f_values)
@@ -81,30 +84,30 @@ class GeneticAlgorithm:
             intervals.append(intervals[-1] + p)
 
         pairs = []
-        for i in range(len(population)):
+        number_of_parents = len(population)
+        number_of_parents += number_of_parents % 2
+        for i in range(number_of_parents):
             if i % 2 == 0: pairs.append([])
             random_number = np.random.uniform(0, 1)
             for j in range(len(intervals) - 1):
                 if random_number >= intervals[j] and random_number < intervals[j+1]:
-                    pairs[j//2].append(population[j])
+                    pairs[i//2].append(population[j])
                     break
         return pairs
 
-    def __crossingover(self, pairs: list, length: int, type: str) -> list:
+    def __crossingover(self, pairs: list, type: str) -> list:
         """
         Выполняет скрещивание и возвращает список новых особей.
         """
         children = []
-        print("PAIRS", pairs)
         for i in range(len(pairs)):
             if type == 'single_point':
-                l = np.random.randint(1, length-1)
-                print(l)
+                l = np.random.randint(1, self.x_max_len - 1)
                 children.append(pairs[i][0][:l] + pairs[i][1][l:])
                 children.append(pairs[i][1][:l] + pairs[i][0][l:])
             elif type == 'two_point':
-                l1 = np.random.randint(1, length-1)
-                l2 = np.random.randint(1, length-1)
+                l1 = np.random.randint(1, self.x_max_len - 1)
+                l2 = np.random.randint(1, self.x_max_len - 1)
                 min_point = min([l1, l2])
                 max_point = max([l1, l2])
                 children.append(pairs[i][0][:min_point] + pairs[i][1][min_point : max_point] + pairs[i][0][max_point:])
@@ -112,7 +115,7 @@ class GeneticAlgorithm:
             elif type == 'uniform':
                 child1 = ''
                 child2 = ''
-                for bit in length:
+                for bit in self.x_max_len:
                     bit_property_child1 = np.random.uniform(0, 1)
                     if bit_property_child1 < 0.5:
                         child1 += pairs[i][0][bit]
@@ -127,24 +130,30 @@ class GeneticAlgorithm:
                 children.append(child2)
         return children
 
-    def __mutation(self, children: list, length: int) -> list:
+    def __mutation(self, children: list) -> list:
         """
         Выполняет мутацию некоторых новых особей.
         """
         mutation_children = children.copy()
-        for child in mutation_children:
+        for i in range(len(mutation_children)):
             random_number = np.random.uniform(0, 1)
             if random_number <= self.p:
-                gene = np.random.randint(0, length)
-                child[gene] = 1 - child[gene]
+                # номер гена, который меняется
+                gene = np.random.randint(0, self.x_max_len)
+                # преобразуем строку в список, чтобы можно было вносить изменения
+                child_list = list(mutation_children[i])
+                # меняем ген
+                child_list[gene] = str(1 - int(child_list[gene]))
+                # преобразуем список обратно в строку
+                mutation_children[i] = ''.join(child_list)
         return mutation_children
 
-    def __reduction(self, population: list, children: list, n_vars: int, x_low: float) -> list:
+    def __reduction(self, population: list, children: list, n_vars: int, x_low: float, f) -> list:
         """
         Выполняет редукцию и возвращает измененную популяцию.
         """
         new_population = population + children
-        new_population.sort(key=lambda x: self.f(self.__decode_point(x, n_vars, x_low)), reverse=True)
+        new_population.sort(key=lambda x: f(self.__decode_point(x, n_vars, x_low)), reverse=True)
         return new_population[:self.k0]
 
     def __dec2gray(self, dec):
