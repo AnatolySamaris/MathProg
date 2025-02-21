@@ -495,8 +495,14 @@ class MainScreen(QMainWindow):
         help_window.show()
 
     def showTestFunctionsMenu(self):
-        mode_window = TestFunctionsWindow(self)
-        mode_window.show()
+        dialog = TestFunctionsWindow(self)
+        if dialog.exec_() == QDialog.Accepted:
+            func, constraints = dialog.get_selected_function()
+            self.function_input.setText(func)
+            self.constraints = constraints
+            constraints_text = ", ".join([f"{var}: [{bounds[0]}, {bounds[1]}]" for var, bounds in self.constraints.items()])
+            self.constraints_display.setText(constraints_text)
+            self.error_message_label.setText("")
 
     def open_constraints_dialog(self):
         try:
