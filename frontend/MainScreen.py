@@ -54,7 +54,7 @@ class CalculationThread(QThread):
         self.loc_params = loc_params
 
     def run(self):
-        try:
+        # try:
             if self.glob_method == "Метод Монте-Карло":
                 if self.loc_method == "Метод Нелдера-Мида":
                     min_point, global_history, local_history, symmetry = Optimizator.monte_karlo(
@@ -111,12 +111,40 @@ class CalculationThread(QThread):
                     )
                 else:
                     return
-        except Exception as e:
-            print("FUNC EXCEPTION: ", e)
-            self.finished.emit(None, None, None, None)  # Добавлен четвертый аргумент
-            return
+            elif self.glob_method == "Генетический алгоритм":
+                if self.loc_method == "Метод Нелдера-Мида":
+                    min_point, global_history, local_history, symmetry = Optimizator.genetic_algorithm(
+                        self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.nelder_mead,
+                        *self.loc_params
+                    )
+                elif self.loc_method == "Метод Пауэлла":
+                    min_point, global_history, local_history, symmetry = Optimizator.genetic_algorithm(
+                        self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.powell,
+                        *self.loc_params
+                    )
+                elif self.loc_method == "Метод Ньютона":
+                    min_point, global_history, local_history, symmetry = Optimizator.genetic_algorithm(
+                        self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.tnc,
+                        *self.loc_params
+                    )
+                elif self.loc_method == "BFGS":
+                    min_point, global_history, local_history, symmetry = Optimizator.genetic_algorithm(
+                        self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.bfgs,
+                        *self.loc_params
+                    )
+                elif self.loc_method == "Градиентный спуск":
+                    min_point, global_history, local_history, symmetry = Optimizator.genetic_algorithm(
+                        self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.gradient_descent,
+                        *self.loc_params
+                    )
+                else:
+                    return
+        # except Exception as e:
+        #     print("FUNC EXCEPTION: ", e)
+        #     self.finished.emit(None, None, None, None)  # Добавлен четвертый аргумент
+        #     return
 
-        self.finished.emit(min_point, global_history, local_history, symmetry)  # Передаем symmetry
+            self.finished.emit(min_point, global_history, local_history, symmetry)  # Передаем symmetry
 
 class MainScreen(QMainWindow):
     def __init__(self):
@@ -264,6 +292,7 @@ class MainScreen(QMainWindow):
         self.glob_methods = QComboBox()
         self.glob_methods.addItem("Метод Монте-Карло")
         self.glob_methods.addItem("Метод имитации отжига")
+        self.glob_methods.addItem("Генетический алгоритм")
         self.glob_methods.setFixedHeight(40)
         self.glob_methods.setFont(font)
         bottom_left_layout.addWidget(self.glob_methods)
@@ -510,6 +539,10 @@ class MainScreen(QMainWindow):
         elif selected_method == "Метод имитации отжига":
             headers = ["Tₘₐₓ", "L", "r", "ε"]
             self.set_table_parameters(table, headers)
+        
+        elif selected_method == "Генетический алгоритм":
+            headers = ["k", "h", "N", "ε", 'p']
+            self.set_table_parameters(table, headers)
 
         elif selected_method == "Метод Нелдера-Мида" or selected_method == "Метод Пауэлла":
             headers = ["N", "ε"]
@@ -640,6 +673,12 @@ class MainScreen(QMainWindow):
                     glob_params.append(int(self.glob_table.item(0, 1).text()))  # L
                     glob_params.append(float(self.glob_table.item(0, 2).text().replace(",", ".")))  # r
                     glob_params.append(float(self.glob_table.item(0, 3).text().replace(",", ".")))  # eps
+                case "Генетический алгоритм":
+                    glob_params.append(int(self.glob_table.item(0, 0).text()))  # k
+                    glob_params.append(float(self.glob_table.item(0, 1).text().replace(",", ".")))  # h
+                    glob_params.append(int(self.glob_table.item(0, 2).text()))  # N
+                    glob_params.append(float(self.glob_table.item(0, 3).text().replace(",", ".")))  # eps
+                    glob_params.append(float(self.glob_table.item(0, 4).text().replace(",", ".")))  # p
                 case _:
                     return
         except Exception as e:
