@@ -87,6 +87,10 @@ class Optimizator:
         return (x_min, glob_history, loc_history, None)
     
 
+    def without_local_optimization(f, x_start, x_low: list, x_high: list, *args, **kwargs):
+        loc_history = []
+        return x_start, loc_history
+    
     def nelder_mead(f, x_start, x_low: list, x_high: list, N_loc: int, eps_loc: float):
         """
         Ищет локальный минимум функции методом Нелдера-Мида.
