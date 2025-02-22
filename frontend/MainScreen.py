@@ -58,7 +58,12 @@ class CalculationThread(QThread):
     def run(self):
         try:
             if self.glob_method == "Метод Монте-Карло":
-                if self.loc_method == "Метод Нелдера-Мида":
+                if self.loc_method == "Не использовать локальную оптимизацию":
+                    min_point, global_history, local_history, symmetry = Optimizator.monte_karlo(
+                        self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.without_local_optimization,
+                        *self.loc_params
+                    )
+                elif self.loc_method == "Метод Нелдера-Мида":
                     min_point, global_history, local_history, symmetry = Optimizator.monte_karlo(
                         self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.nelder_mead,
                         *self.loc_params
@@ -86,7 +91,12 @@ class CalculationThread(QThread):
                 else:
                     return
             elif self.glob_method == "Метод имитации отжига":
-                if self.loc_method == "Метод Нелдера-Мида":
+                if self.loc_method == "Не использовать локальную оптимизацию":
+                    min_point, global_history, local_history, symmetry = Optimizator.annealing_imitation(
+                        self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.without_local_optimization,
+                        *self.loc_params
+                    )
+                elif self.loc_method == "Метод Нелдера-Мида":
                     min_point, global_history, local_history, symmetry = Optimizator.annealing_imitation(
                         self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.nelder_mead,
                         *self.loc_params
@@ -114,7 +124,12 @@ class CalculationThread(QThread):
                 else:
                     return
             elif self.glob_method == "Генетический алгоритм":
-                if self.loc_method == "Метод Нелдера-Мида":
+                if self.loc_method == "Не использовать локальную оптимизацию":
+                    min_point, global_history, local_history, symmetry = Optimizator.genetic_algorithm(
+                        self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.without_local_optimization,
+                        *self.loc_params
+                    )
+                elif self.loc_method == "Метод Нелдера-Мида":
                     min_point, global_history, local_history, symmetry = Optimizator.genetic_algorithm(
                         self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.nelder_mead,
                         *self.loc_params
@@ -328,6 +343,7 @@ class MainScreen(QMainWindow):
 
         # выпадающий список для локальных методов
         self.loc_methods = QComboBox()
+        self.loc_methods.addItem("Не использовать локальную оптимизацию")
         self.loc_methods.addItem("Метод Нелдера-Мида")
         self.loc_methods.addItem("Метод Пауэлла")
         self.loc_methods.addItem("Градиентный спуск")
@@ -586,6 +602,17 @@ class MainScreen(QMainWindow):
             headers = ["N", "ε", "h", "λ"]
             self.set_table_parameters(table, headers)
 
+        elif selected_method == "Не использовать локальную оптимизацию":
+            headers = [""]
+            self.set_table_parameters(table, headers)
+
+            # блокируем редактирование ячеек
+            for row in range(table.rowCount()):
+                for col in range(table.columnCount()):
+                    item = table.item(row, col)
+                    if item:
+                        item.setFlags(item.flags() & ~Qt.ItemIsEnabled)
+
         # выравнивание столбцов на всю ширину
         header = table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.Stretch)
@@ -719,6 +746,8 @@ class MainScreen(QMainWindow):
         loc_params = []
         try:
             match self.loc_methods.currentText():
+                case "Не использовать локальную оптимизацию":
+                    loc_params.append("")
                 case "Метод Нелдера-Мида":
                     loc_params.append(int(self.loc_table.item(0, 0).text()))  # N
                     loc_params.append(float(self.loc_table.item(0, 1).text().replace(",", ".")))  # eps

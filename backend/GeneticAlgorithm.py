@@ -45,15 +45,15 @@ class GeneticAlgorithm:
             min_point = decoded_points[f_values.index(f_min_new)]
             glob_history.append(min_point)
 
-            # if stopping_criteria == 'one_generation':
-            #     f_max_new = max(f_values)
-            #     min_point = decoded_points[f_values.index(f_min_new)]
-            #     if f_max_new - f_min_new < self.eps:
-            #         break
-            # elif stopping_criteria == 'two_generations':
-            #     f_min_old = min([f(self.__decode_point(x, n_vars, x_low)) for x in population])
-            #     if abs(f_min_new - f_min_old) < self.eps:
-            #         break
+            if stopping_criteria == 'one_generation':
+                f_max_new = max(f_values)
+                min_point = decoded_points[f_values.index(f_min_new)]
+                if f_max_new - f_min_new < self.eps:
+                    break
+            elif stopping_criteria == 'two_generations':
+                f_min_old = min([f(self.__decode_point(x, n_vars, x_low)) for x in population])
+                if abs(f_min_new - f_min_old) < self.eps:
+                    break
 
         return glob_history[-1], glob_history
 
@@ -130,7 +130,7 @@ class GeneticAlgorithm:
                 children.append(child2)
         return children
 
-    def __mutation(self, children: list) -> list:
+    def __mutation(self, children: list, type: str) -> list:
         """
         Выполняет мутацию некоторых новых особей.
         """
@@ -138,12 +138,18 @@ class GeneticAlgorithm:
         for i in range(len(mutation_children)):
             random_number = np.random.uniform(0, 1)
             if random_number <= self.p:
-                # номер гена, который меняется
-                gene = np.random.randint(0, self.x_max_len)
                 # преобразуем строку в список, чтобы можно было вносить изменения
                 child_list = list(mutation_children[i])
-                # меняем ген
-                child_list[gene] = str(1 - int(child_list[gene]))
+                if type == 'standard':
+                    # номер гена, который меняется
+                    gene = np.random.randint(0, self.x_max_len)
+                    # меняем ген
+                    child_list[gene] = str(1 - int(child_list[gene]))
+                elif type == 'modification':
+                    for gene in range(self.x_max_len):
+                        # вероятность изменения гена
+                        gene_property = np.random.randint(0, 1)
+                        if gene_property > 0.5: child_list[gene] = str(1 - int(child_list[gene]))
                 # преобразуем список обратно в строку
                 mutation_children[i] = ''.join(child_list)
         return mutation_children
