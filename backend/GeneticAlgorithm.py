@@ -17,12 +17,13 @@ class GeneticAlgorithm:
         self.p = p
         self.x_max_len = None
     
-    def solve(self, f, n_vars: int, x_low: float, x_high: float, stopping_criteria: str) -> tuple:
+    def solve(self, f, n_vars: int, x_low: list, x_high: list, stopping_criteria: str, crossingover_type: str) -> tuple:
         """
         Выполняет генетический алгоритм
         return: x_min, glob_history
         """
         assert stopping_criteria in ['one_generation', 'two_generations'], "Only 'one_generation' or 'two_generations' available."
+        assert crossingover_type in ['single_point', 'two_point', 'uniform'], "Only 'single_point', 'two_point' or 'uniform' available."
 
         # максимальная длина особи
         self.x_max_len = self.__find_max_len(x_low, x_high)
@@ -36,7 +37,7 @@ class GeneticAlgorithm:
             if _ > 0: population = new_population
             pairs = self.__selection(population=population, f=f, n_vars=n_vars, x_low=x_low)
             children = self.__crossingover(pairs=pairs, type='single_point') # тип можно менять
-            mutation_children = self.__mutation(children=children)
+            mutation_children = self.__mutation(children, crossingover_type)
             new_population = self.__reduction(population=population, children=mutation_children, n_vars=n_vars, x_low=x_low, f=f)
 
             f_values = [f(self.__decode_point(x, n_vars, x_low)) for x in new_population]
@@ -115,7 +116,7 @@ class GeneticAlgorithm:
             elif type == 'uniform':
                 child1 = ''
                 child2 = ''
-                for bit in self.x_max_len:
+                for bit in range(self.x_max_len):
                     bit_property_child1 = np.random.uniform(0, 1)
                     if bit_property_child1 < 0.5:
                         child1 += pairs[i][0][bit]

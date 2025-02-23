@@ -87,6 +87,7 @@ class TestFunctionsWindow(QDialog):
         # for i in range(1, 16):
             # self.list_widget.addItem(f"Функция {i}")
         self.list_widget.itemSelectionChanged.connect(self.enable_accept_button)
+        self.list_widget.itemDoubleClicked.connect(self.accept)
 
         layout.addWidget(self.list_widget)
 
