@@ -367,7 +367,7 @@ class MainScreen(QMainWindow):
         )
 
         self.button_calculate = QPushButton()
-        self.button_calculate.setText("Расчитать")
+        self.button_calculate.setText("Рассчитать")
         self.button_calculate.setMinimumHeight(32)
         self.button_calculate.setStyleSheet("""
             QPushButton {

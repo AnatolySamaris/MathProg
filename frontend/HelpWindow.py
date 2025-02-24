@@ -132,11 +132,6 @@ class HelpWindow(QMainWindow):
                 </ul>
             </ol>
         """)
-        self.text_about = QTextEdit("""
-            Математическое программирование.<br>
-            &#169; ЛГТУ, 2025 г <br>
-            Седых О.М., Целищев А.Е.
-        """)
 
         """
         Установление шрифта font тексту каждого блока.
@@ -144,7 +139,6 @@ class HelpWindow(QMainWindow):
         self.text_general.setFont(font)
         self.global_optimization.setFont(font)
         self.local_optimization.setFont(font)
-        self.text_about.setFont(font)
 
         """
         Формирование виджета для отображения инструкций.
@@ -153,7 +147,6 @@ class HelpWindow(QMainWindow):
         self.tab_widget.addTab((self.text_general), "Общие сведения")
         self.tab_widget.addTab((self.global_optimization), "Методы глобальной оптимизации")
         self.tab_widget.addTab((self.local_optimization), "Методы локальной оптимизации")
-        self.tab_widget.addTab((self.text_about), "О программе")
 
         """
         Запрет редактирования текста в каждом блоке инструкций.
