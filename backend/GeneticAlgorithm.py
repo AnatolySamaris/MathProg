@@ -17,12 +17,13 @@ class GeneticAlgorithm:
         self.p = p
         self.x_max_len = None
     
-    def solve(self, f, n_vars: int, x_low: float, x_high: float, stopping_criteria: str) -> tuple:
+    def solve(self, f, n_vars: int, x_low: list, x_high: list, stopping_criteria: str, crossingover_type: str) -> tuple:
         """
         Выполняет генетический алгоритм
         return: x_min, glob_history
         """
         assert stopping_criteria in ['one_generation', 'two_generations'], "Only 'one_generation' or 'two_generations' available."
+        assert crossingover_type in ['single_point', 'two_point', 'uniform'], "Only 'single_point', 'two_point' or 'uniform' available."
 
         # максимальная длина переменной
         self.x_max_len = self.__find_max_len(x_low, x_high)
@@ -103,11 +104,7 @@ class GeneticAlgorithm:
         Выполняет скрещивание и возвращает список новых особей.
         """
         children = []
-        # print('pairs', pairs)
         for i in range(len(pairs)):
-            # print('parent1', pairs[i][0])
-            # print('parent2', pairs[i][1])
-            # print('children', children)
             if type == 'single_point':
                 l = np.random.randint(1, individual_length - 1)
                 children.append(pairs[i][0][:l] + pairs[i][1][l:])
@@ -122,7 +119,6 @@ class GeneticAlgorithm:
             elif type == 'uniform':
                 child1 = ''
                 child2 = ''
-                # print(individual_length)
                 for bit in range(individual_length):
                     bit_property_child1 = np.random.uniform(0, 1)
                     if bit_property_child1 < 0.5:
@@ -134,8 +130,6 @@ class GeneticAlgorithm:
                         child2 += pairs[i][0][bit]
                     else:
                         child2 += pairs[i][1][bit]
-                    # print('parent1_bit', pairs[i][0][bit])
-                    # print('parent2_bit', pairs[i][1][bit])
                     # bit_property = np.random.uniform(0, 1)
                     # if bit_property < 0.5:
                     #     child1 += (pairs[i][0][bit])

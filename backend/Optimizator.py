@@ -82,7 +82,7 @@ class Optimizator:
 
     def genetic_algorithm(f, n_vars: int, x_low: list, x_high: list, k0: int, h: float, n: int, eps: float, p: float, loc_method, *args):
         ga = GeneticAlgorithm(k0, h, n, eps, p)
-        x_min, glob_history = ga.solve(f, n_vars, x_low, x_high, stopping_criteria='one_generation')
+        x_min, glob_history = ga.solve(f, n_vars, x_low, x_high, 'one_generation', 'uniform')
         x_min, loc_history = loc_method(f, x_min, x_low, x_high, *args)
         return (x_min, glob_history, loc_history, None)
     
