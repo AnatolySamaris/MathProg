@@ -24,10 +24,12 @@ class GeneticAlgorithm:
         """
         assert stopping_criteria in ['one_generation', 'two_generations'], "Only 'one_generation' or 'two_generations' available."
 
-        # максимальная длина особи
+        # максимальная длина переменной
         self.x_max_len = self.__find_max_len(x_low, x_high)
         # начальная популяция
         population, start_min_point = self.__create_population(x_low=x_low, x_high=x_high, n_vars=n_vars, func=f)
+        # длина особи
+        individual_length = self.x_max_len * n_vars
 
         glob_history = [start_min_point]
 
@@ -35,9 +37,10 @@ class GeneticAlgorithm:
         for _ in range(self.n):
             if _ > 0: population = new_population
             pairs = self.__selection(population=population, f=f, n_vars=n_vars, x_low=x_low)
-            children = self.__crossingover(pairs=pairs, type='single_point') # тип можно менять
-            mutation_children = self.__mutation(children=children)
+            children = self.__crossingover(pairs=pairs, type='uniform', individual_length=individual_length) # тип можно менять
+            mutation_children = self.__mutation(children=children, type='modification', individual_length=individual_length)
             new_population = self.__reduction(population=population, children=mutation_children, n_vars=n_vars, x_low=x_low, f=f)
+            # print(new_population)
 
             f_values = [f(self.__decode_point(x, n_vars, x_low)) for x in new_population]
             decoded_points = [self.__decode_point(x, n_vars, x_low) for x in new_population]
@@ -95,19 +98,23 @@ class GeneticAlgorithm:
                     break
         return pairs
 
-    def __crossingover(self, pairs: list, type: str) -> list:
+    def __crossingover(self, pairs: list, type: str, individual_length: str) -> list:
         """
         Выполняет скрещивание и возвращает список новых особей.
         """
         children = []
+        # print('pairs', pairs)
         for i in range(len(pairs)):
+            # print('parent1', pairs[i][0])
+            # print('parent2', pairs[i][1])
+            # print('children', children)
             if type == 'single_point':
-                l = np.random.randint(1, self.x_max_len - 1)
+                l = np.random.randint(1, individual_length - 1)
                 children.append(pairs[i][0][:l] + pairs[i][1][l:])
                 children.append(pairs[i][1][:l] + pairs[i][0][l:])
             elif type == 'two_point':
-                l1 = np.random.randint(1, self.x_max_len - 1)
-                l2 = np.random.randint(1, self.x_max_len - 1)
+                l1 = np.random.randint(1, individual_length - 1)
+                l2 = np.random.randint(1, individual_length - 1)
                 min_point = min([l1, l2])
                 max_point = max([l1, l2])
                 children.append(pairs[i][0][:min_point] + pairs[i][1][min_point : max_point] + pairs[i][0][max_point:])
@@ -115,7 +122,8 @@ class GeneticAlgorithm:
             elif type == 'uniform':
                 child1 = ''
                 child2 = ''
-                for bit in self.x_max_len:
+                # print(individual_length)
+                for bit in range(individual_length):
                     bit_property_child1 = np.random.uniform(0, 1)
                     if bit_property_child1 < 0.5:
                         child1 += pairs[i][0][bit]
@@ -126,11 +134,20 @@ class GeneticAlgorithm:
                         child2 += pairs[i][0][bit]
                     else:
                         child2 += pairs[i][1][bit]
+                    # print('parent1_bit', pairs[i][0][bit])
+                    # print('parent2_bit', pairs[i][1][bit])
+                    # bit_property = np.random.uniform(0, 1)
+                    # if bit_property < 0.5:
+                    #     child1 += (pairs[i][0][bit])
+                    #     child2 += (pairs[i][1][bit])
+                    # else:
+                    #     child1 += (pairs[i][1][bit])
+                    #     child2 += (pairs[i][0][bit])
                 children.append(child1)
                 children.append(child2)
         return children
 
-    def __mutation(self, children: list, type: str) -> list:
+    def __mutation(self, children: list, type: str, individual_length: str) -> list:
         """
         Выполняет мутацию некоторых новых особей.
         """
@@ -142,11 +159,11 @@ class GeneticAlgorithm:
                 child_list = list(mutation_children[i])
                 if type == 'standard':
                     # номер гена, который меняется
-                    gene = np.random.randint(0, self.x_max_len)
+                    gene = np.random.randint(0, individual_length)
                     # меняем ген
                     child_list[gene] = str(1 - int(child_list[gene]))
                 elif type == 'modification':
-                    for gene in range(self.x_max_len):
+                    for gene in range(individual_length):
                         # вероятность изменения гена
                         gene_property = np.random.randint(0, 1)
                         if gene_property > 0.5: child_list[gene] = str(1 - int(child_list[gene]))
