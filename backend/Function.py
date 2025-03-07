@@ -18,7 +18,7 @@ class Function:
         self.interval_natural_extension = IntervalNaturalExtention()
         # self.compiled_func = self.__compile_func(self.expr, self.variables)
 
-    def __call__(self, x: List[float]):
+    def __call__(self, x: list):
         return self.__calculate_func(x)
     
     def count_vars(self):
