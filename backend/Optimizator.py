@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.optimize import minimize
-from GeneticAlgorithm import GeneticAlgorithm
+from backend.GeneticAlgorithm import GeneticAlgorithm
+from backend.IntervalOptimizer import IntervalOptimizer
 
 class Optimizator:
     def __init__(self):
@@ -86,6 +87,17 @@ class Optimizator:
         x_min, loc_history = loc_method(f, x_min, x_low, x_high, *args)
         return (x_min, glob_history, loc_history, None)
     
+    def simple_interval_algorithm(f, n_vars: int, x_low: list, x_high: list, eps: float, loc_method, *args):
+        ia = IntervalOptimizer(eps)
+        x_min, glob_history = ia.simple_optimize(f, n_vars, x_low, x_high)
+        x_min, loc_history = loc_method(f, x_min, x_low, x_high, *args)
+        return (x_min, glob_history, loc_history, None)
+    
+    def full_interval_algorithm(f, n_vars: int, x_low: list, x_high: list, eps: float, loc_method, *args):
+        ia = IntervalOptimizer(eps)
+        x_min, glob_history = ia.full_optimize(f, n_vars, x_low, x_high)
+        x_min, loc_history = loc_method(f, x_min, x_low, x_high, *args)
+        return (x_min, glob_history, loc_history, None)
 
     def without_local_optimization(f, x_start, x_low: list, x_high: list, *args, **kwargs):
         loc_history = []

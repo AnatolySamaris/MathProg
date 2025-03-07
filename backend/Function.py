@@ -1,7 +1,9 @@
 import re
 from typing import List
-from sympy import lambdify, sympify, latex
+from sympy import lambdify, sympify, latex, Interval
 from latex2sympy2 import latex2sympy
+
+from backend.IntervalNaturalExtention import IntervalNaturalExtention
 
 class Function:
     """
@@ -13,7 +15,8 @@ class Function:
     def __init__(self, str_func: str):
         self.to_beautify = ""
         self.expr, self.variables = self.__parse_func(str_func)
-        self.compiled_func = self.__compile_func(self.expr, self.variables)
+        self.interval_natural_extension = IntervalNaturalExtention()
+        # self.compiled_func = self.__compile_func(self.expr, self.variables)
 
     def __call__(self, x: List[float]):
         return self.__calculate_func(x)
@@ -36,11 +39,21 @@ class Function:
         variables = sorted(expr.free_symbols, key=lambda s: s.name)
         return expr, variables
 
-    def __compile_func(self, expr, variables):
-        return lambdify(variables, expr, modules="numpy")
+    # def __compile_func(self, expr, variables):
+    #     return lambdify(variables, expr, modules="numpy")
 
-    def __calculate_func(self, x: List[float]):
-        return float(self.compiled_func(*x))
+    def __calculate_func(self, x: list):
+        # Создаем словарь для подстановки переменных
+        interval_dict = {var: val for var, val in zip(self.variables, x)}
+        # Если хотя бы одна переменная — интервал, используем рекурсивную обработку
+        if any(isinstance(val, Interval) for val in x):
+            return self.interval_natural_extension(self.expr, interval_dict)
+            # return eval_interval_expr(self.expr, interval_dict)
+        else:
+            # Если все переменные — числа, используем lambdify
+            compiled_func = lambdify(self.variables, self.expr, modules="numpy")
+            return compiled_func(*x)
+        # return float(self.compiled_func(*x))
 
     def __simplify_indexes(self, subexpr):
         var_pattern = re.compile(r"[xy]_{")

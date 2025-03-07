@@ -156,6 +156,72 @@ class CalculationThread(QThread):
                     )
                 else:
                     return
+            elif self.glob_method == "Простейший интервальный алгоритм":
+                if self.loc_method == "Не использовать локальную оптимизацию":
+                    min_point, global_history, local_history, symmetry = Optimizator.simple_interval_algorithm(
+                        self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.without_local_optimization,
+                        *self.loc_params
+                    )
+                elif self.loc_method == "Метод Нелдера-Мида":
+                    min_point, global_history, local_history, symmetry = Optimizator.simple_interval_algorithm(
+                        self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.nelder_mead,
+                        *self.loc_params
+                    )
+                elif self.loc_method == "Метод Пауэлла":
+                    min_point, global_history, local_history, symmetry = Optimizator.simple_interval_algorithm(
+                        self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.powell,
+                        *self.loc_params
+                    )
+                elif self.loc_method == "Метод Ньютона":
+                    min_point, global_history, local_history, symmetry = Optimizator.simple_interval_algorithm(
+                        self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.tnc,
+                        *self.loc_params
+                    )
+                elif self.loc_method == "BFGS":
+                    min_point, global_history, local_history, symmetry = Optimizator.simple_interval_algorithm(
+                        self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.bfgs,
+                        *self.loc_params
+                    )
+                elif self.loc_method == "Градиентный спуск":
+                    min_point, global_history, local_history, symmetry = Optimizator.simple_interval_algorithm(
+                        self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.gradient_descent,
+                        *self.loc_params
+                    )
+                else:
+                    return
+            elif self.glob_method == "Интервальный алгоритм полного поиска":
+                if self.loc_method == "Не использовать локальную оптимизацию":
+                    min_point, global_history, local_history, symmetry = Optimizator.full_interval_algorithm(
+                        self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.without_local_optimization,
+                        *self.loc_params
+                    )
+                elif self.loc_method == "Метод Нелдера-Мида":
+                    min_point, global_history, local_history, symmetry = Optimizator.full_interval_algorithm(
+                        self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.nelder_mead,
+                        *self.loc_params
+                    )
+                elif self.loc_method == "Метод Пауэлла":
+                    min_point, global_history, local_history, symmetry = Optimizator.full_interval_algorithm(
+                        self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.powell,
+                        *self.loc_params
+                    )
+                elif self.loc_method == "Метод Ньютона":
+                    min_point, global_history, local_history, symmetry = Optimizator.full_interval_algorithm(
+                        self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.tnc,
+                        *self.loc_params
+                    )
+                elif self.loc_method == "BFGS":
+                    min_point, global_history, local_history, symmetry = Optimizator.full_interval_algorithm(
+                        self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.bfgs,
+                        *self.loc_params
+                    )
+                elif self.loc_method == "Градиентный спуск":
+                    min_point, global_history, local_history, symmetry = Optimizator.full_interval_algorithm(
+                        self.func, self.n_vars, self.lower_x, self.upper_x, *self.glob_params, Optimizator.gradient_descent,
+                        *self.loc_params
+                    )
+                else:
+                    return
         except Exception as e:
             print("FUNC EXCEPTION: ", e)
             self.finished.emit(None, None, None, None)  # Добавлен четвертый аргумент
@@ -320,6 +386,8 @@ class MainScreen(QMainWindow):
         self.glob_methods.addItem("Метод Монте-Карло")
         self.glob_methods.addItem("Метод имитации отжига")
         self.glob_methods.addItem("Генетический алгоритм")
+        self.glob_methods.addItem("Простейший интервальный алгоритм")
+        self.glob_methods.addItem("Интервальный алгоритм полного поиска")
         self.glob_methods.setFixedHeight(40)
         self.glob_methods.setFont(font)
         bottom_left_layout.addWidget(self.glob_methods)
@@ -586,6 +654,14 @@ class MainScreen(QMainWindow):
             headers = ["k", "h", "N", "ε", 'p']
             self.set_table_parameters(table, headers)
 
+        elif selected_method == "Простейший интервальный алгоритм":
+            headers = ["eps"]
+            self.set_table_parameters(table, headers)
+
+        elif selected_method == "Интервальный алгоритм полного поиска":
+            headers = ["eps"]
+            self.set_table_parameters(table, headers)
+
         elif selected_method == "Метод Нелдера-Мида" or selected_method == "Метод Пауэлла":
             headers = ["N", "ε"]
             self.set_table_parameters(table, headers)
@@ -736,6 +812,10 @@ class MainScreen(QMainWindow):
                     glob_params.append(int(self.glob_table.item(0, 2).text()))  # N
                     glob_params.append(float(self.glob_table.item(0, 3).text().replace(",", ".")))  # eps
                     glob_params.append(float(self.glob_table.item(0, 4).text().replace(",", ".")))  # p
+                case "Простейший интервальный алгоритм":
+                    glob_params.append(float(self.glob_table.item(0, 0).text().replace(",", ".")))  # eps
+                case "Интервальный алгоритм полного поиска":
+                    glob_params.append(float(self.glob_table.item(0, 0).text().replace(",", ".")))  # eps
                 case _:
                     return
         except Exception as e:
