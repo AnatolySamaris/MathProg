@@ -52,7 +52,7 @@ class Function:
                 interval_dict[key] = val.args[0]
         # Если хотя бы одна переменная — интервал, используем рекурсивную обработку
         if any(isinstance(val, Interval) for val in x):
-            return self.interval_natural_extension(self.expr, interval_dict)
+            return self.interval_natural_extension.eval_interval_expr(self.expr, interval_dict)
             # return eval_interval_expr(self.expr, interval_dict)
         else:
             # Если все переменные — числа, используем lambdify

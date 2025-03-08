@@ -1,7 +1,8 @@
 import numpy as np
 import sympy as sp
-from sympy import Interval
+from sympy import Interval, EmptySet
 from sympy.core import numbers
+from sympy.sets import FiniteSet
 from fractions import Fraction
 
 class IntervalNaturalExtention:
@@ -22,12 +23,15 @@ class IntervalNaturalExtention:
         elif isinstance(expr, numbers.Half):    # Если это "Половина", 1/2
             return expr
         
+        elif isinstance(expr, FiniteSet):   # Если это вырожденный интервал
+            return expr.args[0]
+        
         elif isinstance(expr, sp.Add):  # Обработка сложения
-            intervals = [self.eval_interval_expr(arg, interval_dict) for arg in expr.args]
+            intervals = [self.eval_interval_expr(arg, interval_dict) for arg in expr.args if arg != EmptySet]
             return self.__interval_add(*intervals)
         
         elif isinstance(expr, sp.Mul):  # Обработка умножения
-            intervals = [self.eval_interval_expr(arg, interval_dict) for arg in expr.args]
+            intervals = [self.eval_interval_expr(arg, interval_dict) for arg in expr.args if arg != EmptySet]
             return self.__interval_mul(*intervals)
         
         elif isinstance(expr, sp.Pow):  # Обработка степени
@@ -55,9 +59,12 @@ class IntervalNaturalExtention:
         """
         Сложение интервалов.
         """
+        intervals = [i for i in intervals if i != EmptySet]
+        # print("SUM", intervals, end=" ")
         result_start = sum(i.start if isinstance(i, Interval) else i for i in intervals)
         result_end = sum(i.end if isinstance(i, Interval) else i for i in intervals)
 
+        # print(result_start, result_end)
         if result_start == result_end:
             return result_start
         else:
@@ -68,6 +75,7 @@ class IntervalNaturalExtention:
         """
         Умножение интервалов.
         """
+        intervals = [i for i in intervals if i != EmptySet]
         first = intervals[0]
         result_start = min(first.start, first.end) if isinstance(first, Interval) else first
         result_end = max(first.start, first.end) if isinstance(first, Interval) else first
@@ -81,6 +89,7 @@ class IntervalNaturalExtention:
                 result_start *= val
                 result_end *= val
 
+        # print("MUL", result_start, result_end, intervals)
         if result_start == result_end:
             return result_start
         else:
@@ -99,6 +108,7 @@ class IntervalNaturalExtention:
         """
         Возведение интервала в степень.
         """
+        # print("POW", base, exponent, type(base), type(exponent))
         if isinstance(base, Interval):
             exponent_float = float(exponent)
             ordinary_fraction = Fraction(exponent_float).limit_denominator()

@@ -17,6 +17,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
 import numpy as np
+from sympy.core import numbers
 
 from frontend.HelpWindow import HelpWindow
 from frontend.TestFunctionsWindow import TestFunctionsWindow
@@ -56,7 +57,7 @@ class CalculationThread(QThread):
         self.loc_params = loc_params
 
     def run(self):
-        try:
+        # try:
             if self.glob_method == "Метод Монте-Карло":
                 if self.loc_method == "Не использовать локальную оптимизацию":
                     min_point, global_history, local_history, symmetry = Optimizator.monte_karlo(
@@ -222,12 +223,12 @@ class CalculationThread(QThread):
                     )
                 else:
                     return
-        except Exception as e:
-            print("FUNC EXCEPTION: ", e)
-            self.finished.emit(None, None, None, None)  # Добавлен четвертый аргумент
-            return
+        # except Exception as e:
+        #     print("FUNC EXCEPTION: ", e)
+        #     self.finished.emit(None, None, None, None)  # Добавлен четвертый аргумент
+        #     return
 
-        self.finished.emit(min_point, global_history, local_history, symmetry)  # Передаем symmetry
+            self.finished.emit(min_point, global_history, local_history, symmetry)  # Передаем symmetry
 
 class MainScreen(QMainWindow):
     def __init__(self):
@@ -897,7 +898,7 @@ class MainScreen(QMainWindow):
         # Рисуем график
         global_history_length = len(global_history)
         local_history_length = len(local_history)
-        global_history_f = [self.func(x) for x in global_history]
+        global_history_f = global_history if isinstance(global_history[0], numbers.Float) else [self.func(x) for x in global_history]
         global_steps = list(range(0, global_history_length))
         local_history_f = [self.func(x) for x in local_history]
         local_steps = list(range(global_history_length - 1, global_history_length - 1 + local_history_length))
