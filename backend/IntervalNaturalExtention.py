@@ -2,10 +2,11 @@ import numpy as np
 import sympy as sp
 from sympy import Interval
 from sympy.core import numbers
+from fractions import Fraction
 
 class IntervalNaturalExtention:
     def __init__(self):
-        pass
+        self.inf = float("inf")
 
     def eval_interval_expr(self, expr, interval_dict):
         """
@@ -85,13 +86,63 @@ class IntervalNaturalExtention:
         else:
             return Interval(result_start, result_end)
 
+    def __real_pow(self, x, exponent):
+        """
+        Вычисляет действительное значение x^exponent.
+        """
+        if x < 0:
+            return -abs(x) ** exponent
+        else:
+            return x ** exponent
 
-    def __interval_pow(self, base, exponent):   # TODO : ПЕРЕПИСАТЬ
+    def __interval_pow(self, base, exponent):
         """
         Возведение интервала в степень.
         """
         if isinstance(base, Interval):
-            return Interval(base.start ** exponent, base.end ** exponent)
+            exponent_float = float(exponent)
+            ordinary_fraction = Fraction(exponent_float).limit_denominator()
+            numenator = ordinary_fraction.numerator
+            denominator = ordinary_fraction.denominator
+
+            if exponent_float > 0:
+                if denominator % 2 == 0:
+                    if base.start >= 0:
+                        return Interval(self.__real_pow(base.start, exponent_float), self.__real_pow(base.end, exponent_float))
+                    else:
+                        return None
+                else:
+                    if numenator % 2 == 0:
+                        return Interval(min(self.__real_pow(base.start, exponent_float), self.__real_pow(base.end, exponent_float)), max(self.__real_pow(base.start, exponent_float), self.__real_pow(base.end, exponent_float)))
+                    else:
+                        return Interval(self.__real_pow(base.start, exponent_float), self.__real_pow(base.end, exponent_float))
+            else:
+                if denominator % 2 == 0:
+                    if base.end <= 0:
+                        return None
+                    elif base.start == 0:
+                        return Interval(self.__real_pow(base.end, exponent_float), self.inf)
+                    else:
+                        return Interval(self.__real_pow(base.end, exponent_float), self.__real_pow(base.start, exponent_float))
+                else:
+                    if numenator % 2 == 0:
+                        if base.end < 0 or base.start > 0:
+                            return Interval(min(self.__real_pow(base.start, exponent_float), self.__real_pow(base.end, exponent_float)), max(self.__real_pow(base.start, exponent_float), self.__real_pow(base.end, exponent_float)))
+                        elif base.start == 0:
+                            return Interval(self.__real_pow(base.end, exponent_float), self.inf)
+                        elif base.end == 0:
+                            return Interval(self.__real_pow(base.start, exponent_float), self.inf)
+                        else:
+                            return Interval(min(self.__real_pow(base.start, exponent_float), self.__real_pow(base.end, exponent_float)), self.inf)
+                    else:
+                        if base.end < 0 or base.start > 0:
+                            return Interval(self.__real_pow(base.end, exponent_float), self.__real_pow(base.start, exponent_float))
+                        elif base.start == 0:
+                            return Interval(self.__real_pow(base.end, exponent_float), self.inf)
+                        elif base.end == 0:
+                            return Interval(-self.inf, self.__real_pow(base.start, exponent_float))
+                        else:
+                            return Interval(-self.inf, self.inf)
         else:
             return float(base**exponent)
 
