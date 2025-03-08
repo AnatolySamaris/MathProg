@@ -1,7 +1,9 @@
 import re
 from typing import List
 from sympy import lambdify, sympify, latex, Interval
+from sympy.sets import FiniteSet
 from latex2sympy2 import latex2sympy
+
 
 from backend.IntervalNaturalExtention import IntervalNaturalExtention
 
@@ -45,6 +47,9 @@ class Function:
     def __calculate_func(self, x: list):
         # Создаем словарь для подстановки переменных
         interval_dict = {var: val for var, val in zip(self.variables, x)}
+        for key, val in interval_dict.items():
+            if isinstance(val, FiniteSet):
+                interval_dict[key] = val.args[0]
         # Если хотя бы одна переменная — интервал, используем рекурсивную обработку
         if any(isinstance(val, Interval) for val in x):
             return self.interval_natural_extension(self.expr, interval_dict)
