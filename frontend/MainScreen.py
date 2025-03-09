@@ -877,6 +877,7 @@ class MainScreen(QMainWindow):
         # Получаем результаты
         time_end = time() - self.start_time
         min_value = self.func(min_point)
+        # min_value = self.func(min_point) if (isinstance(global_history[0], numbers.Float) or isinstance(global_history[0], numbers.Zero)) else global_history[-1]
         vars = self.func.get_vars()
 
         # Вывод результатов

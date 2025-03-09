@@ -16,9 +16,9 @@ class IntervalOptimizer:
         f_min = func(self.__mid(p))    # Для отбрасывания неподходящих брусов
         L = deque([(p, f_)])
 
-        glob_history = [f_.start]
+        glob_history = [f_.start.evalf()]
         last_box = p
-        while len(L) > 0 and (L[0][1].end - L[0][1].start) > self.eps:
+        while len(L) > 0 and (L[0][1].end.evalf() - L[0][1].start.evalf()) > self.eps:
         # while np.any(self.__wid(L[0][0]) > self.eps):
             print("ITERATION", len(glob_history) + 1, len(L))
             print("WID:", self.__wid(L[0][0]), L[0][0])
@@ -47,21 +47,20 @@ class IntervalOptimizer:
             L.popleft()
 
             # Сортируем по возрастанию
-            funcs = sorted([(subbox1, f_1), (subbox2, f_2)], key=lambda x: x[1].start)
+            funcs = sorted([(subbox1, f_1), (subbox2, f_2)], key=lambda x: x[1].start.evalf())
             print("FUNCTIONS", funcs)
 
             # Фильтруем и добавляем
             for f in funcs:
-                if f[1].start <= f_min and self.__monotonic_test(func, f[0]):
+                if f[1].start.evalf() <= f_min and self.__monotonic_test(func, f[0]):
                     L.append(f)
             
-            # Обновляем f_min
-            f_min = func(self.__mid(L[0][0]))
-            # f_min = min(f_min, f_1.end, f_2.end)
-
-            # Сохраняем историю
-            glob_history.append(L[0][1].start)  # для истории сохраняем ОЦЕНКИ ФУНКЦИИ, а не точки
-            last_box = L[0][0]
+            # Обновляем f_min, сохраняем историю
+            if len(L) > 0:
+                f_min = func(self.__mid(L[0][0]))
+                # f_min = min(f_min, f_1.end, f_2.end)
+                glob_history.append(L[0][1].start.evalf())  # для истории сохраняем ОЦЕНКИ ФУНКЦИИ, а не точки
+                last_box = L[0][0]
 
         x_min = self.__mid(last_box)
         return x_min, glob_history
@@ -109,8 +108,10 @@ class IntervalOptimizer:
         gradient_estimations = self.__gradient_estimation(func, box)
         grad_center_mul = [0, 0]
         for i in range(len(centered_diff)): # [gT]([x]) * (x - m)
-            mul = [centered_diff[i][0] * gradient_estimations[i].first, centered_diff[i][0] * gradient_estimations[i].second,
-                centered_diff[i][1] * gradient_estimations[i].first, centered_diff[i][1] * gradient_estimations[i].second]
+            mul = [centered_diff[i][0] * gradient_estimations[i].start.evalf(), 
+                centered_diff[i][0] * gradient_estimations[i].end.evalf(),
+                centered_diff[i][1] * gradient_estimations[i].start.evalf(), 
+                centered_diff[i][1] * gradient_estimations[i].end.evalf()]
             grad_center_mul[0] += min(mul)
             grad_center_mul[1] += max(mul)
         f_m = func(m)   #  f(m), просто число
@@ -133,7 +134,7 @@ class IntervalOptimizer:
         gradient_estimations = self.__gradient_estimation(func, box)
         flag = True
         for g in gradient_estimations:  # Если все компоненты содержат ноль, то норм
-            if g.end < 0 or g.start > 0:
+            if g.end.evalf() < 0 or g.start.evalf() > 0:
                 flag = False
                 break
         return flag
