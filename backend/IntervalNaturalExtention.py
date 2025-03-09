@@ -198,7 +198,10 @@ class IntervalNaturalExtention:
                 res_start = -1
             if abs(arg.end % (2 * sp.pi) - sp.pi / 2) < 0.01:
                 res_end = 1
-            return Interval(res_start, res_end)
+            if res_start == res_end:
+                return res_start
+            else:
+                return Interval(res_start, res_end)
         else:
             return sp.sin(arg)
 
@@ -214,7 +217,10 @@ class IntervalNaturalExtention:
                 res_end = 1
             if abs((arg.end % sp.pi) - sp.pi) < 0.01:
                 res_start = -1
-            return Interval(res_start, res_end)
+            if res_start == res_end:
+                return res_start
+            else:
+                return Interval(res_start, res_end)
         else:
             return sp.cos(arg)
 
