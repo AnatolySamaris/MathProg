@@ -898,7 +898,7 @@ class MainScreen(QMainWindow):
         # Рисуем график
         global_history_length = len(global_history)
         local_history_length = len(local_history)
-        global_history_f = global_history if isinstance(global_history[0], numbers.Float) else [self.func(x) for x in global_history]
+        global_history_f = global_history if (isinstance(global_history[0], numbers.Float) or isinstance(global_history[0], numbers.Zero)) else [self.func(x) for x in global_history]
         global_steps = list(range(0, global_history_length))
         local_history_f = [self.func(x) for x in local_history]
         local_steps = list(range(global_history_length - 1, global_history_length - 1 + local_history_length))

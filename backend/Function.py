@@ -1,6 +1,6 @@
 import re
 from typing import List
-from sympy import lambdify, sympify, latex, Interval
+from sympy import lambdify, sympify, latex, Interval, diff
 from sympy.sets import FiniteSet
 from latex2sympy2 import latex2sympy
 
@@ -14,14 +14,19 @@ class Function:
     func = Function(r"\sin(x_1) + x_2^2")
     result = func([1.0, 2.0])  # 0.84147 + 4 = 4.84147
     """
-    def __init__(self, str_func: str):
+    def __init__(self, str_func: str, is_grad=False):
+        self.is_grad = is_grad
         self.to_beautify = ""
+        self.gradient = None
         self.expr, self.variables = self.__parse_func(str_func)
         self.interval_natural_extension = IntervalNaturalExtention()
         # self.compiled_func = self.__compile_func(self.expr, self.variables)
 
     def __call__(self, x: list):
         return self.__calculate_func(x)
+    
+    def get_gradient(self):
+        return self.gradient
     
     def count_vars(self):
         return len(self.variables)
@@ -33,12 +38,16 @@ class Function:
         return latex(self.to_beautify)
 
     def __parse_func(self, str_func: str):
-        without_spaces = str_func.replace(" ", "")
-        self.to_beautify = latex2sympy(without_spaces)
-        expanded = self.__expand_sums(without_spaces)
-        simplified = self.__simplify_indexes(expanded)
-        expr = latex2sympy(simplified)
+        if not self.is_grad:
+            without_spaces = str_func.replace(" ", "")
+            self.to_beautify = latex2sympy(without_spaces)
+            expanded = self.__expand_sums(without_spaces)
+            simplified = self.__simplify_indexes(expanded)
+            expr = latex2sympy(simplified)
+        else:
+            expr = sympify(str_func)
         variables = sorted(expr.free_symbols, key=lambda s: s.name)
+        self.gradient = [diff(expr, var) for var in variables]
         return expr, variables
 
     # def __compile_func(self, expr, variables):
