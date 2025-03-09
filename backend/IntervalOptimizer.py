@@ -117,9 +117,10 @@ class IntervalOptimizer:
         result = np.array(grad_center_mul) + f_m    # f(m) + [gT]([x]) * (x - m), интервал
         return Interval(*result)
 
-    def __middle_point_test(self, func, box) -> bool:
+    def __middle_point_test(self, func, mid, box) -> bool:
         """
         Тест на значение в средней точке.
+        mid - точка, относительно которой надо выполнить тест
         """
         pass
 
