@@ -123,11 +123,19 @@ class IntervalOptimizer:
         """
         pass
 
-    def __monotonic_test(self) -> bool:
+    def __monotonic_test(self, func, box: list) -> bool:
         """
-        Тест на НУО, монотонность.
+        Тест на НУО, монотонность на указанном брусе.
+        Вернет True, если на брусе ИМЕЕТСЯ точка экстремума,
+        то есть функция НЕМОНОТОННА на брусе.
         """
-        pass
+        gradient_estimations = self.__gradient_estimation(func, box)
+        flag = True
+        for g in gradient_estimations:  # Если все компоненты содержат ноль, то норм
+            if g.end < 0 or g.start > 0:
+                flag = False
+                break
+        return flag
 
     def __convexity_test(self) -> bool:
         """
