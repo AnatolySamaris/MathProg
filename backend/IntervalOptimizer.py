@@ -68,7 +68,68 @@ class IntervalOptimizer:
 
 
     def full_optimize(self, func, n_vars: int, x_low: list, x_high: list, eps: float) -> tuple:
-        pass
+        p = [[x_low[i], x_high[i]] for i in range(n_vars)]  # Начальный брус - заданные интервалы Х
+        p_ = [Interval(*i) for i in p]  # Для вычислений
+        f_ = func(p_)    # Вычисление естественной функции включения
+        f_min_high = f_.end # Верхняя граница оценки минимума
+        f_min_low = f_.start # Нижняя граница оценки минимума
+        L = deque([(p, f_)])
+        L_res = [] # Список глобальных минимумов
+
+        flag = True
+        while len(L) > 0 or flag:
+            current_box = L[0][0]
+
+            # Считаем точку разбиения
+            bisection_index = np.argmax(self.__wid(current_box))
+            bisection_interval = current_box[bisection_index]
+            bisection_center = (bisection_interval[1] + bisection_interval[0]) / 2
+
+            # Разделяем текущий брус на подбрусы
+            subbox1, subbox2 = deepcopy(current_box), deepcopy(current_box)
+            subbox1[bisection_index] = [subbox1[bisection_index][0], bisection_center]
+            subbox2[bisection_index] = [bisection_center, subbox2[bisection_index][1]]
+
+            # Оценки функции в новых брусах
+            subbox1_ = [Interval(*i) for i in subbox1]
+            subbox2_ = [Interval(*i) for i in subbox2]
+
+            f_1 = func(subbox1_)
+            f_2 = func(subbox2_)
+
+            # Сортируем по возрастанию
+            funcs = sorted([(subbox1, f_1), (subbox2, f_2)], key=lambda x: x[1].start)
+
+            # Проверяем все необходимые тесты и добавляем брусы, прошедшие их
+            for f in funcs:
+                if self.__monotonic_test(func, f[0]) \
+                    and self.__low_point_test(func, f[0], f_min_high) \
+                    and self.__convexity_test(func, f[0]):
+                        L.append(f)
+
+            # f_min_high = min(f_min_high, f(self.__mid(L[0][0])))
+            # f_min_low = max(f_min_low, f(self.__mid(L[0][0])))
+
+            L_new = []
+            for i in range(len(L)):
+                if self.__middle_point_test(func, self.__mid(L[i][0]), f_min_low):
+                    L_new.append(L[i])
+            L = L_new
+
+            # Обновление верхней и нижней оценки глобального минимума
+            f_min_high = min(f_min_high, func(self.__mid(L[0][0])))
+            f_min_low = L[0][0].start
+
+            # Сохранение новых глобальных минимумов, если они нашлись
+            if f_min_high - f_min_low < eps or self.__wid(L[0][0]) < eps:
+                L_res.append(L[0][0])
+            else:
+                flag = False
+
+            x_mins = [self.__mid(box) for box, f_box in L_res]
+            print(x_mins)
+            glob_history = []
+            return x_mins[0], glob_history
 
     def __wid(self, box: list) -> np.array:
         """
@@ -99,6 +160,21 @@ class IntervalOptimizer:
             gf = Function(g, is_grad=True)
             gradient_estimations.append(gf(box_))
         return gradient_estimations
+    
+    def __hessian_estimation(self, func, box: list) -> list[Interval]:
+        """
+        Возвращает естественную функцию включения для матрицы Гессе функции.
+        Возвращает список списков ИНТЕРВАЛОВ.
+        """
+        box_ = [Interval(*i) for i in box]
+        hessian = func.get_hessian()  # Список списков производных (как в матрице Гессе)
+        hessian_estimations = []   # Естественные функции включения для каждого элемента
+        for row in hessian:
+            hessian_estimations.append([])
+            for i in range(len(row)):
+                hf = Function(row[i], is_grad=True)
+                hessian_estimations[i].append(hf(box_))
+        return hessian_estimations
 
     def __centered_estimation(self, func, box: list) -> Interval:
         """
@@ -117,12 +193,27 @@ class IntervalOptimizer:
         result = np.array(grad_center_mul) + f_m    # f(m) + [gT]([x]) * (x - m), интервал
         return Interval(*result)
 
-    def __middle_point_test(self, func, mid, box) -> bool:
+    def __middle_point_test(self, func, mid, f_min_low) -> bool:
         """
         Тест на значение в средней точке.
         mid - точка, относительно которой надо выполнить тест
+        Если нижняя оценка функции включения на брусе больше среднего, 
+        то этот брус считается неперспективным. (?)
+        Возвращает True, если брус остается, False - если откидывается
         """
-        pass
+        # f_center_low = self.__centered_estimation(func, box)
+        # return not (f_center_low.start > func(mid))
+        return not (f_min_low > func(mid))
+    
+    def __low_point_test(self, func, box, f_min_high) -> bool:
+        """
+        Тест на значение в нижней границе.
+        Если нижняя оценка центрированной функции включения на брусе больше верхней оценки
+        глобального минимума, то этот брус считается неперспективным.
+        Возвращает True, если брус остается, False - если откидывается
+        """
+        f_center_low = self.__centered_estimation(func, box)
+        return not (f_center_low.start > f_min_high)
 
     def __monotonic_test(self, func, box: list) -> bool:
         """
@@ -138,8 +229,13 @@ class IntervalOptimizer:
                 break
         return flag
 
-    def __convexity_test(self) -> bool:
+    def __convexity_test(self, func, box: list) -> bool:
         """
         Тест на ДУО, выпуклость.
+        Возвращает True, если брус остается, False - если откидывается
         """
-        pass
+        hessian_estimations = self.__hessian_estimation(func, box)
+        for i in range(len(hessian_estimations)):
+            if hessian_estimations[i][i].end < 0:
+                return False
+        return True

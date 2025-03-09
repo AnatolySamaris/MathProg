@@ -1,6 +1,6 @@
 import re
 from typing import List
-from sympy import lambdify, sympify, latex, Interval, diff
+from sympy import lambdify, sympify, latex, Interval, diff, hessian
 from sympy.sets import FiniteSet
 from latex2sympy2 import latex2sympy
 
@@ -18,6 +18,7 @@ class Function:
         self.is_grad = is_grad
         self.to_beautify = ""
         self.gradient = None
+        self.hessian = None
         self.expr, self.variables = self.__parse_func(str_func)
         self.interval_natural_extension = IntervalNaturalExtention()
         # self.compiled_func = self.__compile_func(self.expr, self.variables)
@@ -27,6 +28,9 @@ class Function:
     
     def get_gradient(self):
         return self.gradient
+    
+    def get_hessian(self):
+        return self.hessian
     
     def count_vars(self):
         return len(self.variables)
@@ -48,6 +52,7 @@ class Function:
             expr = sympify(str_func)
         variables = sorted(expr.free_symbols, key=lambda s: s.name)
         self.gradient = [diff(expr, var) for var in variables]
+        self.hessian = hessian(expr, variables).tolist()
         return expr, variables
 
     # def __compile_func(self, expr, variables):
