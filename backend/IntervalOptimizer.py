@@ -52,7 +52,7 @@ class IntervalOptimizer:
 
             # Фильтруем и добавляем
             for f in funcs:
-                if f[1].start <= f_min:
+                if f[1].start <= f_min and self.__monotonic_test(func, f[0]):
                     L.append(f)
             
             # Обновляем f_min
