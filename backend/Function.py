@@ -14,8 +14,9 @@ class Function:
     func = Function(r"\sin(x_1) + x_2^2")
     result = func([1.0, 2.0])  # 0.84147 + 4 = 4.84147
     """
-    def __init__(self, str_func: str, is_grad=False):
+    def __init__(self, str_func: str, is_grad=False, is_hess=False):
         self.is_grad = is_grad
+        self.is_hess = is_hess
         self.to_beautify = ""
         self.gradient = None
         self.hessian = None
@@ -26,10 +27,16 @@ class Function:
     def __call__(self, x: list):
         return self.__calculate_func(x)
     
+    # def get_gradient(self):
+    #     return self.gradient
     def get_gradient(self):
+        if self.gradient is None:
+            self.gradient = [diff(self.expr, var) for var in self.variables]
         return self.gradient
     
     def get_hessian(self):
+        if self.hessian is None:
+            self.hessian = hessian(self.expr, self.variables).tolist()
         return self.hessian
     
     def count_vars(self):
@@ -42,17 +49,22 @@ class Function:
         return latex(self.to_beautify)
 
     def __parse_func(self, str_func: str):
-        if not self.is_grad:
+        # print('PARSE')
+        if self.is_grad or self.is_hess:
+            # print('IS_GRAD')
+            expr = sympify(str_func)
+            variables = sorted(expr.free_symbols, key=lambda s: s.name)
+        else:
+            # print('NOT_IS_GRAD')
             without_spaces = str_func.replace(" ", "")
             self.to_beautify = latex2sympy(without_spaces)
             expanded = self.__expand_sums(without_spaces)
             simplified = self.__simplify_indexes(expanded)
             expr = latex2sympy(simplified)
-        else:
-            expr = sympify(str_func)
-        variables = sorted(expr.free_symbols, key=lambda s: s.name)
-        self.gradient = [diff(expr, var) for var in variables]
-        self.hessian = hessian(expr, variables).tolist()
+            variables = sorted(expr.free_symbols, key=lambda s: s.name)
+            # self.gradient = [diff(expr, var) for var in variables]
+            # self.hessian = hessian(expr, variables).tolist()
+        # print(self.gradient)
         return expr, variables
 
     # def __compile_func(self, expr, variables):

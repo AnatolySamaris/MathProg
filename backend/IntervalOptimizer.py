@@ -70,13 +70,16 @@ class IntervalOptimizer:
         p = [[x_low[i], x_high[i]] for i in range(n_vars)]  # Начальный брус - заданные интервалы Х
         p_ = [Interval(*i) for i in p]  # Для вычислений
         f_ = func(p_)    # Вычисление естественной функции включения
-        f_min_high = f_.end # Верхняя граница оценки минимума
-        f_min_low = f_.start # Нижняя граница оценки минимума
+        f_min_high = f_.end.evalf() # Верхняя граница оценки минимума
+        f_min_low = f_.start.evalf() # Нижняя граница оценки минимума
         L = deque([(p, f_)])
         L_res = [] # Список глобальных минимумов
+        glob_history = [f_min_low]
 
         flag = True
-        while len(L) > 0 or flag:
+        count = 0
+        while len(L) > 1 or flag:
+            count += 1
             current_box = L[0][0]
 
             # Считаем точку разбиения
@@ -96,39 +99,73 @@ class IntervalOptimizer:
             f_1 = func(subbox1_)
             f_2 = func(subbox2_)
 
+            m = self.__mid(L[0][0])
+            f_low = L[0][1].start.evalf()
+
+            # Убираем первый элемент
+            L.popleft()
+
             # Сортируем по возрастанию
-            funcs = sorted([(subbox1, f_1), (subbox2, f_2)], key=lambda x: x[1].start)
+            funcs = sorted([(subbox1, f_1), (subbox2, f_2)], key=lambda x: x[1].start.evalf())
 
             # Проверяем все необходимые тесты и добавляем брусы, прошедшие их
+            # and self.__middle_point_test(func, f_min_high, f[0]) \
             for f in funcs:
                 if self.__monotonic_test(func, f[0]) \
                     and self.__low_point_test(func, f[0], f_min_high) \
                     and self.__convexity_test(func, f[0]):
                         L.append(f)
+                        # print('APPEND', L)
 
+            # по личной инициативе
+            # конкретно этот код - совсем старый, надо смотреть ниже
             # f_min_high = min(f_min_high, f(self.__mid(L[0][0])))
             # f_min_low = max(f_min_low, f(self.__mid(L[0][0])))
 
-            L_new = []
+            # Обновление верхней и нижней оценки глобального минимума
+            # f_min_high = min(f_min_high, func(self.__mid(L[0][0])))
+            # f_min_low = L[0][1].start.evalf()
+
+            L_new = deque()
             for i in range(len(L)):
                 if self.__middle_point_test(func, self.__mid(L[i][0]), f_min_low):
+                    # print('APPEND', L[i])
                     L_new.append(L[i])
             L = L_new
 
             # Обновление верхней и нижней оценки глобального минимума
+            # (наверное, лучше здесь, а не выше, потому что изначально в f_min_low и так L[0][1].start.evalf())
             f_min_high = min(f_min_high, func(self.__mid(L[0][0])))
-            f_min_low = L[0][0].start
+            f_min_low = L[0][1].start.evalf()
 
+            # по лекции
+            # f_min_high = min(f_min_high, func(m))
+            # f_min_low = f_low
+
+            # L_new = deque()
+            # for i in range(len(L)):
+            #     if self.__middle_point_test(func, f_min_high, L[i][0]):
+            #         # print('APPEND', L[i])
+            #         L_new.append(L[i])
+            # L = L_new
+
+            # print('FIRST', L[0][0])
+
+            # print('FIRST_INTERVAL', L[0][0])
+            # print('WID', self.__wid(L[0][0]))
             # Сохранение новых глобальных минимумов, если они нашлись
-            if f_min_high - f_min_low < eps or self.__wid(L[0][0]) < eps:
-                L_res.append(L[0][0])
+            if f_min_high - f_min_low < eps or all(wid < eps for wid in self.__wid(L[0][0])):
+                # print('YES')
+                L_res.append(L[0])
             else:
+                # print('NO')
                 flag = False
 
-            x_mins = [self.__mid(box) for box, f_box in L_res]
-            print(x_mins)
-            glob_history = []
-            return x_mins[0], glob_history
+        x_mins = [self.__mid(box) for box, f_box in L_res]
+        print('X_MINS', x_mins)
+        print('LEN_X_MINS', len(x_mins))
+        print('COUNT', count)
+        return x_mins[0], glob_history
 
     def __wid(self, box: list) -> np.array:
         """
@@ -148,15 +185,17 @@ class IntervalOptimizer:
         return np.mean(box, axis=1)
     
     def __gradient_estimation(self, func, box: list) -> list[Interval]:
+        # print('GRADIENT')
         """
         Возвращает естественную функцию включения для градиента функции.
         Возвращает список ИНТЕРВАЛОВ.
         """
         box_ = [Interval(*i) for i in box]
         gradient = func.get_gradient()  # Список градиентов соответственно переменным функции
+        # print('GRADIENT', gradient)
         gradient_estimations = []   # Естественные функции включения по каждой производной
         for g in gradient:
-            gf = Function(g, is_grad=True)
+            gf = Function(str(g), is_grad=True)
             gradient_estimations.append(gf(box_))
         return gradient_estimations
     
@@ -165,14 +204,17 @@ class IntervalOptimizer:
         Возвращает естественную функцию включения для матрицы Гессе функции.
         Возвращает список списков ИНТЕРВАЛОВ.
         """
+        # print('YES')
         box_ = [Interval(*i) for i in box]
         hessian = func.get_hessian()  # Список списков производных (как в матрице Гессе)
+        # print('HESSIAN', hessian)
         hessian_estimations = []   # Естественные функции включения для каждого элемента
-        for row in hessian:
+        for j in range(len(hessian)):
             hessian_estimations.append([])
-            for i in range(len(row)):
-                hf = Function(row[i], is_grad=True)
-                hessian_estimations[i].append(hf(box_))
+            for i in range(len(hessian[j])):
+                hf = Function(hessian[j][i], is_grad=True)
+                hessian_estimations[j].append(hf(box_))
+        # print('estimation', hessian_estimations)
         return hessian_estimations
 
     def __centered_estimation(self, func, box: list) -> Interval:
@@ -194,6 +236,20 @@ class IntervalOptimizer:
         result = np.array(grad_center_mul) + f_m    # f(m) + [gT]([x]) * (x - m), интервал
         return Interval(*result)
 
+    # def __middle_point_test(self, func, mid, f_min_low) -> bool:
+    #     """
+    #     Тест на значение в средней точке.
+    #     mid - точка, относительно которой надо выполнить тест
+    #     Если нижняя оценка функции включения на брусе больше среднего, 
+    #     то этот брус считается неперспективным. (?)
+    #     Возвращает True, если брус остается, False - если откидывается
+    #     """
+    #     # f_center_low = self.__centered_estimation(func, box)
+    #     # return not (f_center_low.start > func(mid))
+    #     return not (f_min_low > func(mid))
+
+
+    # def __middle_point_test(self, func, mid, box) -> bool:
     def __middle_point_test(self, func, mid, f_min_low) -> bool:
         """
         Тест на значение в средней точке.
@@ -203,8 +259,10 @@ class IntervalOptimizer:
         Возвращает True, если брус остается, False - если откидывается
         """
         # f_center_low = self.__centered_estimation(func, box)
-        # return not (f_center_low.start > func(mid))
+        # print(f_center_low)
+        # return not (f_center_low.start.evalf() > mid)
         return not (f_min_low > func(mid))
+        # return not (func(box).start.evalt() > func(mid))
     
     def __low_point_test(self, func, box, f_min_high) -> bool:
         """
@@ -214,7 +272,7 @@ class IntervalOptimizer:
         Возвращает True, если брус остается, False - если откидывается
         """
         f_center_low = self.__centered_estimation(func, box)
-        return not (f_center_low.start > f_min_high)
+        return not (f_center_low.start.evalf() > f_min_high)
 
     def __monotonic_test(self, func, box: list) -> bool:
         """
@@ -237,6 +295,10 @@ class IntervalOptimizer:
         """
         hessian_estimations = self.__hessian_estimation(func, box)
         for i in range(len(hessian_estimations)):
-            if hessian_estimations[i][i].end < 0:
+            if isinstance(hessian_estimations[i][i], Interval):
+                hess_el = hessian_estimations[i][i].end.evalf()
+            else:
+                hess_el = hessian_estimations[i][i]
+            if hess_el < 0:
                 return False
         return True
