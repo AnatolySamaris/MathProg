@@ -1,6 +1,6 @@
 from collections import deque
 import numpy as np
-from sympy import Interval
+from sympy import Interval, FiniteSet
 from copy import deepcopy
 
 from backend.Function import Function
@@ -66,7 +66,7 @@ class IntervalOptimizer:
         return x_min, glob_history
 
 
-    def full_optimize(self, func, n_vars: int, x_low: list, x_high: list, eps: float) -> tuple:
+    def full_optimize(self, func, n_vars: int, x_low: list, x_high: list, eps: float, n_mins: int) -> tuple:
         p = [[x_low[i], x_high[i]] for i in range(n_vars)]  # Начальный брус - заданные интервалы Х
         p_ = [Interval(*i) for i in p]  # Для вычислений
         f_ = func(p_)    # Вычисление естественной функции включения
@@ -126,6 +126,7 @@ class IntervalOptimizer:
             # f_min_high = min(f_min_high, func(self.__mid(L[0][0])))
             # f_min_low = L[0][1].start.evalf()
 
+            # это брать
             L_new = deque()
             for i in range(len(L)):
                 if self.__middle_point_test(func, self.__mid(L[i][0]), f_min_low):
@@ -133,11 +134,13 @@ class IntervalOptimizer:
                     L_new.append(L[i])
             L = L_new
 
+            # это брать
             # Обновление верхней и нижней оценки глобального минимума
             # (наверное, лучше здесь, а не выше, потому что изначально в f_min_low и так L[0][1].start.evalf())
             f_min_high = min(f_min_high, func(self.__mid(L[0][0])))
             f_min_low = L[0][1].start.evalf()
 
+            
             # по лекции
             # f_min_high = min(f_min_high, func(m))
             # f_min_low = f_low
@@ -161,11 +164,109 @@ class IntervalOptimizer:
                 # print('NO')
                 flag = False
 
-        x_mins = [self.__mid(box) for box, f_box in L_res]
+        # x_mins = [self.__mid(box) for box, f_box in L_res]
+        # x_mins_sort = sorted(x_mins, key=lambda x: self.__wid(x))
+        # x_mins_result = x_mins_sort[:n_mins]
+        # x_mins_sort = x_mins_sort[n_mins:]
+        # for i in range(len(x_mins_result)):
+        #     for j in range(i+1, len(x_mins_result)):
+        #         if ((x_mins_result[i].start.evalt() >= x_mins_result[j].start.evalt() and \
+        #             x_mins_result[i].end.evalt() <= x_mins_result[j].end.evalt()) or \
+        #             (x_mins_result[j].start.evalt() >= x_mins_result[i].start.evalt() and \
+        #             x_mins_result[j].end.evalt() <= x_mins_result[i].end.evalt())):
+        #                 new_interval = Interval([
+        #                     max(x_mins_result[i].start.evalt(), x_mins_result[j].start.evalt()),
+        #                     min(x_mins_result[i].end.evalt(), x_mins_result[j].end.evalt()),
+        #                 ])
+        #                 x_mins_result = x_mins_result[:i] + x_mins_result[i+1 : j] + x_mins_result[j+1:]
+        #                 x_mins_result.append(new_interval)
+
+        # 
+        p_mins = [el[0] for el in L_res]
+        x_mins_sort = sorted(p_mins, key=lambda x: sum(self.__wid(x)))
+        # print('X_MINS_SORT', x_mins_sort)
+        # x_mins_sort = [[Interval(*bounds) for bounds in interval_pair] for interval_pair in x_mins_sort]
+
+        # epsilon = 1e-2
+        # for i in range(len(x_mins_sort)):
+        #     if isinstance(x_mins_sort[i], FiniteSet):
+        #         x_mins_sort[i] = Interval(float(interval_pair.value), float(interval_pair.value) + epsilon)
+        
+        # processed_x_mins_sort = []
+        # for interval_list in x_mins_sort:
+        #     print('YES')
+        #     processed_interval_list = []
+        #     for interval_pair in interval_list:
+        #         if isinstance(interval_pair, FiniteSet):
+        #             print('INTERVAL_PAIR_FINITE', interval_pair)
+        #             print(Interval(float(interval_pair.args[0]), float(interval_pair.args[0]) + epsilon))
+        #             processed_interval = Interval(float(interval_pair.args[0]), float(interval_pair.args[0]) + epsilon)
+        #         else:
+        #             processed_interval = interval_pair
+        #         processed_interval_list.append(processed_interval)
+        #     processed_x_mins_sort.append(processed_interval_list)
+        # x_mins_sort = processed_x_mins_sort
+        x_mins_result = []
+        for interval_pair in x_mins_sort:
+            if len(x_mins_result) >= n_mins:
+                break
+            # Проверяем пересечение с уже добавленными интервалами
+            intersect = False
+            for i, existing_interval_pair in enumerate(x_mins_result):
+                # Проверяем пересечение по всем переменным
+                new_interval_pair = []
+                for interval, existing_interval in zip(interval_pair, existing_interval_pair):
+                    print(interval, existing_interval)
+                    intersection = self.__intersect_intervals(interval, existing_interval)
+                    if intersection is None:
+                        # Если хотя бы по одной переменной нет пересечения, выходим
+                        break
+                    new_interval_pair.append(intersection)
+                else:
+                    # Если пересечение найдено по всем переменным
+                    x_mins_result.pop(i)
+                    x_mins_result.append(new_interval_pair)
+                    intersect = True
+                    break
+            # Если пересечений не было, просто добавляем интервал
+            if not intersect:
+                x_mins_result.append(interval_pair)
+
+        print('X_MINS_RESULT', x_mins_result)
+        x_mins = [self.__mid(box) for box in x_mins_result]
         print('X_MINS', x_mins)
-        print('LEN_X_MINS', len(x_mins))
+        print('LEN_X_MINS', len(x_mins_result))
         print('COUNT', count)
+
         return x_mins[0], glob_history
+    
+    def __intersect_intervals(self, interval1, interval2):
+        """
+        Проверяет, пересекаются ли два интервала.
+        Возвращает новый интервал как пересечение или None, если пересечения нет.
+        """
+        # eps = 0.01
+        # if isinstance(interval1, FiniteSet):
+        #     interval1_start = interval1.args[0]
+        #     interval1_end = interval1.args[0] + eps
+        # else:
+        #     interval1_start = interval1.start.evalf()
+        #     interval1_end = interval1.end.evalf()
+        # if isinstance(interval2, FiniteSet):
+        #     interval2_start = interval2.args[0]
+        #     interval2_end = interval2.args[0] + eps
+        # else:
+        #     interval2_start = interval2.start.evalf()
+        #     interval2_end = interval2.end.evalf()
+        # new_start = max(interval1_start, interval2_start)
+        # new_end = min(interval1_end, interval2_end)
+        new_start = max(interval1[0], interval2[0])
+        new_end = min(interval1[1], interval2[1])
+        # if new_end == new_start: new_end += eps
+        if new_start <= new_end:
+            # return Interval(new_start, new_end)
+            return [new_start, new_end]
+        return None
 
     def __wid(self, box: list) -> np.array:
         """
@@ -259,9 +360,9 @@ class IntervalOptimizer:
         Возвращает True, если брус остается, False - если откидывается
         """
         # f_center_low = self.__centered_estimation(func, box)
-        # print(f_center_low)
         # return not (f_center_low.start.evalf() > mid)
         return not (f_min_low > func(mid))
+    
         # return not (func(box).start.evalt() > func(mid))
     
     def __low_point_test(self, func, box, f_min_high) -> bool:

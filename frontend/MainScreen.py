@@ -660,7 +660,7 @@ class MainScreen(QMainWindow):
             self.set_table_parameters(table, headers)
 
         elif selected_method == "Интервальный алгоритм полного поиска":
-            headers = ["eps"]
+            headers = ["eps", "n_mins"]
             self.set_table_parameters(table, headers)
 
         elif selected_method == "Метод Нелдера-Мида" or selected_method == "Метод Пауэлла":
@@ -817,6 +817,7 @@ class MainScreen(QMainWindow):
                     glob_params.append(float(self.glob_table.item(0, 0).text().replace(",", ".")))  # eps
                 case "Интервальный алгоритм полного поиска":
                     glob_params.append(float(self.glob_table.item(0, 0).text().replace(",", ".")))  # eps
+                    glob_params.append(int(self.glob_table.item(0, 1).text()))  # n_mins
                 case _:
                     return
         except Exception as e:
