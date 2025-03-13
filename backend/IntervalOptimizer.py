@@ -74,7 +74,7 @@ class IntervalOptimizer:
         f_min_low = f_.start.evalf() # Нижняя граница оценки минимума
         L = deque([(p, f_)])
         L_res = [] # Список глобальных минимумов
-        glob_history = [f_min_low]
+        glob_history = []
 
         flag = True
         count = 0
@@ -139,11 +139,13 @@ class IntervalOptimizer:
             # (наверное, лучше здесь, а не выше, потому что изначально в f_min_low и так L[0][1].start.evalf())
             f_min_high = min(f_min_high, func(self.__mid(L[0][0])))
             f_min_low = L[0][1].start.evalf()
+            glob_history.append(f_min_high-f_min_low)
 
             
             # по лекции
             # f_min_high = min(f_min_high, func(m))
             # f_min_low = f_low
+            # glob_history.append(f_min_high-f_min_low)
 
             # L_new = deque()
             # for i in range(len(L)):
@@ -350,8 +352,8 @@ class IntervalOptimizer:
     #     return not (f_min_low > func(mid))
 
 
-    # def __middle_point_test(self, func, mid, box) -> bool:
-    def __middle_point_test(self, func, mid, f_min_low) -> bool:
+    def __middle_point_test(self, func, mid, box) -> bool:
+    # def __middle_point_test(self, func, mid, f_min_low) -> bool:
         """
         Тест на значение в средней точке.
         mid - точка, относительно которой надо выполнить тест
@@ -359,9 +361,9 @@ class IntervalOptimizer:
         то этот брус считается неперспективным. (?)
         Возвращает True, если брус остается, False - если откидывается
         """
-        # f_center_low = self.__centered_estimation(func, box)
-        # return not (f_center_low.start.evalf() > mid)
-        return not (f_min_low > func(mid))
+        f_center_low = self.__centered_estimation(func, box)
+        return not (f_center_low.start.evalf() > mid)
+        # return not (f_min_low > func(mid))
     
         # return not (func(box).start.evalt() > func(mid))
     
