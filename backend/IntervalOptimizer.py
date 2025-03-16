@@ -140,7 +140,7 @@ class IntervalOptimizer:
         f_min_low = f_.start.evalf() # Нижняя граница оценки минимума
         L = deque([(p, f_)])
         L_res = [] # Список глобальных минимумов
-        glob_history = []
+        glob_history = [f_min_high]
 
         flag = True
         count = 0
@@ -192,7 +192,8 @@ class IntervalOptimizer:
             # по лекции
             f_min_high = min(f_min_high, func(m))
             f_min_low = L[0][1].start.evalf() #f_low
-            glob_history.append(f_min_high-f_min_low)
+            # glob_history.append(f_min_high-f_min_low)
+            glob_history.append(f_min_high)
 
             L_new = deque()
             for i in range(len(L)):
