@@ -123,7 +123,7 @@ class IntervalOptimizer:
 
             f_1 = func(subbox1_)
             f_2 = func(subbox2_)
-            print('SUBBOXES', subbox1, f_1, subbox2, f_2)
+            # print('SUBBOXES', subbox1, f_1, subbox2, f_2)
 
             m = self.__mid(L[0][0])
             f_low = L[0][1].start.evalf()
@@ -160,7 +160,7 @@ class IntervalOptimizer:
                     L_new.append(L[i])
             L = L_new
 
-            print('FIRST_INTERVAL', L[0][0])
+            # print('FIRST_INTERVAL', L[0][0])
             # Сохранение новых глобальных минимумов, если они нашлись
             if f_min_high - f_min_low < eps or all(wid < eps for wid in self.__wid(L[0][0])):
                 L_res.append(L[0])
