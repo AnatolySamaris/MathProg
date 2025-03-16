@@ -29,7 +29,7 @@ class IntervalOptimizer:
         last_box = p
         while len(L) > 0 and (L[0][1].end.evalf() - L[0][1].start.evalf()) > self.eps:
         # while np.any(self.__wid(L[0][0]) > self.eps):
-            print("ITERATION", len(glob_history) + 1, len(L))
+            print("ITERATION", len(glob_history), len(L))
             cnt_max_Llen = max(cnt_max_Llen, len(L))
             
             current_box = L[0][0]
@@ -61,6 +61,9 @@ class IntervalOptimizer:
             f_1 = func(subbox1_)
             f_2 = func(subbox2_)
 
+            print("CALC F1", subbox1_, f_1)
+            print("CALC F2", subbox2_, f_2)
+
             # Пересчет смещения разбиения
             f1_val = f_1.start.evalf()
             f2_val = f_2.start.evalf()
@@ -75,13 +78,20 @@ class IntervalOptimizer:
                 f2_val = abs(f2_val)
             # print("M VALUES", m)
             # m[bisection_index] = float(subbox1[bisection_index][0] + current_box_wid[bisection_index] * f_1.start.evalf() / f_2.start.evalf())
-            m = subbox1[bisection_index][0] + (f1_val * current_box_wid[bisection_index]) / (f1_val + f2_val)
+            m = subbox1[bisection_index][0] + (f1_val * current_box_wid[bisection_index]) / (f1_val + f2_val + 1e-6)
+            # min_delta = 0.1 * (subbox1[bisection_index][1] - subbox1[bisection_index][0])
+            # m = np.clip(m, 
+            #     subbox1[bisection_index][0] + min_delta, 
+            #     subbox1[bisection_index][1] - min_delta
+            # )
 
             print("M CALC", subbox1[bisection_index][0], f1_val * current_box_wid[bisection_index], (f1_val + f2_val), m)
             pm[bisection_index] = (m - current_box[bisection_index][0]) / current_box_wid[bisection_index]
+            pm[bisection_index] = np.clip(pm[bisection_index], 0.1, 0.9)
             # print("CALCULATION", subbox1[bisection_index][0], current_box_wid[bisection_index], (f_1.start * current_box_wid[bisection_index]) / (f_1.start + f_2.start),
                 #   subbox1[bisection_index][0] + (f_1.start * current_box_wid[bisection_index]) / (f_1.start + f_2.start))
             print("CALCULATION", m, current_box[bisection_index][0], current_box_wid[bisection_index], (m - current_box[bisection_index][0]) / current_box_wid[bisection_index])
+            print("CLIPPED PM", np.clip(pm[bisection_index], 0.1, 0.9))
 
             # Убираем первый элемент
             L.popleft()
@@ -97,6 +107,7 @@ class IntervalOptimizer:
                     L.append(f)
                 else:
                     if f[1].start.evalf() > f_min:
+                        print(f"REMOVE FUNC: {f[1].start.evalf()} is upper than {f_min}")
                         cnt_removed_minf += 1
                     else:
                         cnt_removed_test += 1
