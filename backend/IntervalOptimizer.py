@@ -144,7 +144,7 @@ class IntervalOptimizer:
 
         flag = True
         count = 0
-        w_eps = 1e-50
+        w_eps = 1e-6
         while (len(L) > 1 or flag) and np.all(self.__wid(L[0][0]) > w_eps):
             count += 1
             current_box = L[0][0]
@@ -182,8 +182,15 @@ class IntervalOptimizer:
                 if self.__monotonic_test(func, f[0]) \
                     and self.__low_point_test(func, f[0], f_min_high) \
                     and self.__convexity_test(func, f[0]):
-                        L.append(f)
+                        # L.append(f)
+                        if f == funcs[0]:
+                            L.appendleft(f)
+                        # Добавляем второй элемент сразу за первым
+                        else:
+                            L.insert(0, f)
                         # print('APPEND', L)
+
+            # L = deque(sorted(L, key=lambda x: x[1].start.evalf()))
 
             # по личной инициативе
             # конкретно этот код - совсем старый, надо смотреть ниже
@@ -205,14 +212,14 @@ class IntervalOptimizer:
             # это брать
             # Обновление верхней и нижней оценки глобального минимума
             # (наверное, лучше здесь, а не выше, потому что изначально в f_min_low и так L[0][1].start.evalf())
-            # f_min_high = min(f_min_high, func(self.__mid(L[0][0])))
-            # f_min_low = L[0][1].start.evalf()
+            # f_min_high = max(min(f_min_high, func(self.__mid(L[0][0]))), L[0][1].start.evalf())
+            # f_min_low = min(min(f_min_high, func(self.__mid(L[0][0]))), L[0][1].start.evalf()) # L[0][1].start.evalf()
             # glob_history.append(f_min_high-f_min_low)
 
             
             # по лекции
             f_min_high = min(f_min_high, func(m))
-            f_min_low = f_low
+            f_min_low = L[0][1].start.evalf() #f_low
             glob_history.append(f_min_high-f_min_low)
 
             L_new = deque()
