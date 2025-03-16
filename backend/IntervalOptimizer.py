@@ -78,7 +78,8 @@ class IntervalOptimizer:
 
         flag = True
         count = 0
-        while len(L) > 1 or flag:
+        w_eps = 1e-50
+        while (len(L) > 1 or flag) and np.all(self.__wid(L[0][0]) > w_eps):
             count += 1
             current_box = L[0][0]
 
@@ -98,6 +99,7 @@ class IntervalOptimizer:
 
             f_1 = func(subbox1_)
             f_2 = func(subbox2_)
+            print('SUBBOXES', subbox1, f_1, subbox2, f_2)
 
             m = self.__mid(L[0][0])
             f_low = L[0][1].start.evalf()
@@ -156,7 +158,7 @@ class IntervalOptimizer:
 
             # print('FIRST', L[0][0])
 
-            # print('FIRST_INTERVAL', L[0][0])
+            print('FIRST_INTERVAL', L[0][0])
             # print('WID', self.__wid(L[0][0]))
             # Сохранение новых глобальных минимумов, если они нашлись
             if f_min_high - f_min_low < eps or all(wid < eps for wid in self.__wid(L[0][0])):
@@ -325,7 +327,7 @@ class IntervalOptimizer:
         Центрированная функция включения, возвращает интервал значений функции.
         """
         m = self.__mid(box)
-        centered_diff = np.array(box) - np.array(m) # (x - m)
+        centered_diff = np.array(box) - np.tile(np.array(m).reshape(-1, 1), 2) # (x - m)
         gradient_estimations = self.__gradient_estimation(func, box)
         grad_center_mul = [0, 0]
         for i in range(len(centered_diff)): # [gT]([x]) * (x - m)
@@ -352,8 +354,8 @@ class IntervalOptimizer:
     #     return not (f_min_low > func(mid))
 
 
-    def __middle_point_test(self, func, mid, box) -> bool:
-    # def __middle_point_test(self, func, mid, f_min_low) -> bool:
+    # def __middle_point_test(self, func, mid, box) -> bool:
+    def __middle_point_test(self, func, mid, f_min_low) -> bool:
         """
         Тест на значение в средней точке.
         mid - точка, относительно которой надо выполнить тест
@@ -361,9 +363,9 @@ class IntervalOptimizer:
         то этот брус считается неперспективным. (?)
         Возвращает True, если брус остается, False - если откидывается
         """
-        f_center_low = self.__centered_estimation(func, box)
-        return not (f_center_low.start.evalf() > mid)
-        # return not (f_min_low > func(mid))
+        # f_center_low = self.__centered_estimation(func, box)
+        # return not (f_center_low.start.evalf() > mid)
+        return not (f_min_low > func(mid))
     
         # return not (func(box).start.evalt() > func(mid))
     
@@ -397,7 +399,9 @@ class IntervalOptimizer:
         Возвращает True, если брус остается, False - если откидывается
         """
         hessian_estimations = self.__hessian_estimation(func, box)
+        # print('HESSIAN_ESTIMATION', hessian_estimations)
         for i in range(len(hessian_estimations)):
+            # print(hessian_estimations[i][i])
             if isinstance(hessian_estimations[i][i], Interval):
                 hess_el = hessian_estimations[i][i].end.evalf()
             else:
