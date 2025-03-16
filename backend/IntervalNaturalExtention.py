@@ -4,6 +4,7 @@ from sympy import Interval, EmptySet
 from sympy.core import numbers
 from sympy.sets import FiniteSet
 from fractions import Fraction
+import math
 
 class IntervalNaturalExtention:
     def __init__(self):
@@ -192,12 +193,14 @@ class IntervalNaturalExtention:
         Вычисление синуса для интервала.
         """
         if isinstance(arg, Interval):
-            res_start = np.min([sp.sin(arg.start), sp.sin(arg.end)])
-            res_end = np.max([sp.sin(arg.start), sp.sin(arg.end)])
-            if abs(arg.start % (2 * sp.pi) - 3 * sp.pi / 2) < 0.01:
+            if self.__check_a_in_b([arg.start, arg.end], 3 * sp.pi / 2):
                 res_start = -1
-            if abs(arg.end % (2 * sp.pi) - sp.pi / 2) < 0.01:
+            else:
+                res_start = np.min([sp.sin(arg.start), sp.sin(arg.end)])
+            if self.__check_a_in_b([arg.start, arg.end], sp.pi / 2):
                 res_end = 1
+            else:
+                res_end = np.max([sp.sin(arg.start), sp.sin(arg.end)])
             if res_start == res_end:
                 return res_start
             else:
@@ -211,12 +214,14 @@ class IntervalNaturalExtention:
         Вычисление косинуса для интервала.
         """
         if isinstance(arg, Interval):
-            res_start = np.min([sp.cos(arg.start), sp.cos(arg.end)])
-            res_end = np.max([sp.cos(arg.start), sp.cos(arg.end)])
-            if abs((arg.start % sp.pi) - 0) < 0.01:
-                res_end = 1
-            if abs((arg.end % sp.pi) - sp.pi) < 0.01:
+            if self.__check_a_in_b([arg.start, arg.end], sp.pi):
                 res_start = -1
+            else:
+                res_start = np.min([sp.cos(arg.start), sp.cos(arg.end)])
+            if self.__check_a_in_b([arg.start, arg.end], 2 * sp.pi):
+                res_end = 1
+            else:
+                res_end = np.max([sp.cos(arg.start), sp.cos(arg.end)])
             if res_start == res_end:
                 return res_start
             else:
@@ -233,3 +238,9 @@ class IntervalNaturalExtention:
             return Interval(sp.exp(arg.start), sp.exp(arg.end))
         else:
             return sp.exp(arg)
+
+    def __check_a_in_b(self, a: list, b: float) -> bool:
+        assert len(a) == 2, "First argument must be an interval of list type."
+        a = [a[0] - b, a[1] - b]
+        multiple = math.ceil(a[0] / (2 * np.pi)) * (2 * np.pi)
+        return multiple <= a[1]
