@@ -46,10 +46,10 @@ functions = {
         r"\frac{x_1^2 + x_2^2}{200} - \cos(x_1) * \cos(\frac{x_2}{\sqrt{2}}) + 1",
         {f"x{i}": [-100, 100] for i in range(1, 2+1)}
     ],
-    "Функция Биггса Exp2": [
-        r"\sum_{i=1}^{10} (\exp{-\frac{i*x_1}{10}} - 5 * \exp{-\frac{i*x_2}{10}} - \exp{-\frac{i}{10}} + 5 * \exp{i})",
-        {f"x{i}": [0, 20] for i in range(1, 2+1)}
-    ],
+    # "Функция Биггса Exp2": [
+    #     r"\sum_{i=1}^{10} (\exp{-\frac{i*x_1}{10}} - 5 * \exp{-\frac{i*x_2}{10}} - \exp{-\frac{i}{10}} + 5 * \exp{i})",
+    #     {f"x{i}": [0, 20] for i in range(1, 2+1)}
+    # ],
     "Функция Треккани": [
         r"x_1^4 + 4*x_1^3 + 4 *x_1^2 + x_2^2",
         {f"x{i}": [-5, 5] for i in range(1, 2+1)}
