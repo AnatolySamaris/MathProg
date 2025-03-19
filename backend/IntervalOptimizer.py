@@ -102,8 +102,9 @@ class IntervalOptimizer:
 
         flag = True
         count = 0
-        w_eps = 1e-6
-        while (len(L) > 1 or flag) and np.all(self.__wid(L[0][0]) > w_eps):
+        w_eps = 1e-16
+        # while (len(L) > 1 or flag) and np.all(self.__wid(L[0][0]) > w_eps):
+        while len(L) > 0 and np.all(self.__wid(L[0][0]) > eps):
             count += 1
             current_box = L[0][0]
 
@@ -138,7 +139,7 @@ class IntervalOptimizer:
             # and self.__middle_point_test(func, f_min_high, f[0]) \
             for f in funcs:
                 if self.__monotonic_test(func, f[0]) \
-                    and self.__low_point_test(func, f[0], f_min_high) \
+                    and self.__middle_point_test(func, f_min_high, f[0]) \
                     and self.__convexity_test(func, f[0]):
                         # L.append(f)
                         if f == funcs[0]:
@@ -148,10 +149,12 @@ class IntervalOptimizer:
                             L.insert(0, f)
             
             # по лекции
-            f_min_high = min(f_min_high, func(m))
-            f_min_low = L[0][1].start.evalf() #f_low
-            # glob_history.append(f_min_high-f_min_low)
-            glob_history.append(f_min_high)
+            # f_min_high = min(f_min_high, func(m))
+            if len(L) > 0: 
+                f_min_high = min(f_min_high, func(self.__mid(L[0][0])))
+                f_min_low = L[0][1].start.evalf() #f_low
+                glob_history.append(f_min_high-f_min_low)
+            # glob_history.append(f_min_high)
 
             L_new = deque()
             for i in range(len(L)):
@@ -162,11 +165,14 @@ class IntervalOptimizer:
 
             # print('FIRST_INTERVAL', L[0][0])
             # Сохранение новых глобальных минимумов, если они нашлись
-            if f_min_high - f_min_low < eps or all(wid < eps for wid in self.__wid(L[0][0])):
-                L_res.append(L[0])
-            else:
-                flag = False
+            # if f_min_high - f_min_low < eps or all(wid < eps for wid in self.__wid(L[0][0])):
+            # if f_min_high - f_min_low:
+            #     L_res.append(L[0])
+            # else:
+            #     flag = False
+            if len(L) > 0: L_res.append(L[0])
 
+        print('L_RES', L_res)
         p_mins = [el[0] for el in L_res]
         x_mins_sort = sorted(p_mins, key=lambda x: sum(self.__wid(x)))
         x_mins_result = []
@@ -195,13 +201,17 @@ class IntervalOptimizer:
             if not intersect:
                 x_mins_result.append(interval_pair)
 
+            print('X_MINS_RESULT', x_mins_result)
+            x_mins_result = self.__merge_close_points(x_mins_result, 1)
+            
+
         print('X_MINS_RESULT', x_mins_result)
         x_mins = [self.__mid(box) for box in x_mins_result]
         print('X_MINS', x_mins)
         print('LEN_X_MINS', len(x_mins_result))
         print('COUNT', count)
 
-        return x_mins[0], glob_history
+        return x_mins, glob_history
     
     def __intersect_intervals(self, interval1, interval2):
         """
@@ -213,6 +223,91 @@ class IntervalOptimizer:
         if new_start <= new_end:
             return [new_start, new_end]
         return None
+    
+    # def __merge_close_points(self, x_mins_result, eps):
+    #     merged_points = []
+
+    #     for interval_pair in x_mins_result:
+    #         # midpoint = self.__mid(interval_pair)
+    #         found_close_point = False
+    #         for i, existing_point in enumerate(x_mins_result):
+    #             distance = np.linalg.norm(np.array(self.__mid(interval_pair)) - np.array(self.__mid(existing_point)))
+    #             print('DIST', distance)
+    #             if distance < 1:
+    #                 merged_points.append(self.__merge_intervals(x_mins_result[i], interval_pair))
+    #                 found_close_point = True
+    #                 break
+    #         if not found_close_point:
+    #             merged_points.append(interval_pair)
+
+    #     return merged_points
+    
+    # def __merge_intervals(self, interval1, interval2):
+    #     merged_interval = []
+    #     for i in range(len(interval1)):
+    #         lower = min(interval1[i][0], interval2[i][0])
+    #         upper = max(interval1[i][1], interval2[i][1])
+    #         merged_interval.append([lower, upper])
+    #     return merged_interval
+
+    def __merge_close_points(self, x_mins_result, eps):
+        """
+        Объединяет все интервалы, которые находятся на расстоянии меньше eps.
+        
+        :param x_mins_result: Список интервалов, представляющих точки минимума.
+        :param eps: Максимальное расстояние для объединения интервалов.
+        :return: Список объединенных интервалов.
+        """
+        if not x_mins_result:
+            return []  # Если список пустой, возвращаем пустой список
+
+        # Вычисляем середины интервалов
+        midpoints = [self.__mid(interval_pair) for interval_pair in x_mins_result]
+
+        # Список для хранения кластеров
+        clusters = []
+
+        # Группируем интервалы в кластеры
+        for i, midpoint in enumerate(midpoints):
+            added_to_cluster = False
+            for cluster in clusters:
+                # Проверяем расстояние до всех интервалов в кластере
+                if all(np.linalg.norm(np.array(midpoint) - np.array(midpoints[j])) < eps for j in cluster):
+                    cluster.append(i)  # Добавляем индекс интервала в кластер
+                    added_to_cluster = True
+                    break
+            if not added_to_cluster:
+                clusters.append([i])  # Создаем новый кластер
+
+        # Объединяем интервалы в каждом кластере
+        merged_points = []
+        for cluster in clusters:
+            # Собираем все интервалы из кластера
+            intervals_in_cluster = [x_mins_result[i] for i in cluster]
+            
+            # Объединяем интервалы
+            merged_interval = self.__merge_intervals_in_cluster(intervals_in_cluster)
+            merged_points.append(merged_interval)
+
+        return merged_points
+
+    def __merge_intervals_in_cluster(self, intervals_in_cluster):
+        """
+        Объединяет интервалы в кластере.
+        
+        :param intervals_in_cluster: Список интервалов в кластере.
+        :return: Объединенный интервал.
+        """
+        # Инициализируем объединенный интервал
+        merged_interval = [[float('inf'), -float('inf')] for _ in intervals_in_cluster[0]]
+
+        # Находим минимальные и максимальные границы
+        for interval_pair in intervals_in_cluster:
+            for i, interval in enumerate(interval_pair):
+                merged_interval[i][0] = min(merged_interval[i][0], interval[0])
+                merged_interval[i][1] = max(merged_interval[i][1], interval[1])
+
+        return merged_interval
 
     def __wid(self, box: list) -> np.array:
         """
