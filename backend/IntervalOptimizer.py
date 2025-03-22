@@ -154,7 +154,7 @@ class IntervalOptimizer:
 
             if len(L) > 0: L_res.append(L[0])
 
-        print('L_RES', L_res)
+        # print('L_RES', L_res)
         p_mins = [el[0] for el in L_res]
         x_mins_sort = sorted(p_mins, key=lambda x: sum(self.__wid(x)))
         x_mins_result = []
@@ -183,15 +183,15 @@ class IntervalOptimizer:
             if not intersect:
                 x_mins_result.append(interval_pair)
 
-            print('X_MINS_RESULT', x_mins_result)
+            # print('X_MINS_RESULT', x_mins_result)
             x_mins_result = self.__merge_close_points(x_mins_result, 3)
             
 
-        print('X_MINS_RESULT', x_mins_result)
+        # print('X_MINS_RESULT', x_mins_result)
         x_mins = [self.__mid(box) for box in x_mins_result]
-        print('X_MINS', x_mins)
-        print('LEN_X_MINS', len(x_mins_result))
-        print('COUNT', count)
+        # print('X_MINS', x_mins)
+        # print('LEN_X_MINS', len(x_mins_result))
+        # print('COUNT', count)
 
         return x_mins, glob_history
     
