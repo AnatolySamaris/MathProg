@@ -660,7 +660,7 @@ class MainScreen(QMainWindow):
             self.set_table_parameters(table, headers)
 
         elif selected_method == "Интервальный алгоритм полного поиска":
-            headers = ["eps"]
+            headers = ["eps", "n_mins"]
             self.set_table_parameters(table, headers)
 
         elif selected_method == "Метод Нелдера-Мида" or selected_method == "Метод Пауэлла":
@@ -817,6 +817,7 @@ class MainScreen(QMainWindow):
                     glob_params.append(float(self.glob_table.item(0, 0).text().replace(",", ".")))  # eps
                 case "Интервальный алгоритм полного поиска":
                     glob_params.append(float(self.glob_table.item(0, 0).text().replace(",", ".")))  # eps
+                    glob_params.append(int(self.glob_table.item(0, 1).text()))  # n_mins
                 case _:
                     return
         except Exception as e:
@@ -876,8 +877,14 @@ class MainScreen(QMainWindow):
 
         # Получаем результаты
         time_end = time() - self.start_time
-        min_point = list(map(float, min_point)) # Чтобы избежать проблем с типами данных из sympy
-        min_value = self.func(min_point)
+        # print('TYPE', type(min_point[0]))
+        if all(isinstance(item, np.ndarray) for item in min_point):
+            min_point = [list(map(float, sublist)) for sublist in min_point]
+            min_value = self.func(min_point[0])
+        else:
+            min_point = list(map(float, min_point))
+            min_value = self.func(min_point)
+        # min_value = self.func(min_point)
         # min_value = self.func(min_point) if (isinstance(global_history[0], numbers.Float) or isinstance(global_history[0], numbers.Zero)) else global_history[-1]
         vars = self.func.get_vars()
 
@@ -886,9 +893,20 @@ class MainScreen(QMainWindow):
         self.result_time_label.show()
         self.result_value_label.setText(f"<b>Минимум функции f(x*):</b> {round(min_value, 6)}")
         self.result_value_label.show()
+        # if self.glob_method == "Интервальный алгоритм полного поиска":
+        #     self.result_point_label.setText("<b>Точки минимума:</b>")
+        # else:
+        #     self.result_point_label.setText("<b>Минимум достигается в точке:</b>")
         self.result_point_label.setText("<b>Минимум достигается в точке:</b>")
         self.result_point_label.show()
-        self.result_point.setText(f"({'; '.join(vars)}) = ({'; '.join(map(lambda x: str(round(x, 6)), min_point))})")
+        print(type(min_point))
+        if all(isinstance(item, list) for item in min_point):
+            print('YES')
+            formatted_points = ["(" + "; ".join(map(lambda x: str(round(x, 6)), point)) + ")" for point in min_point]
+            self.result_point.setText(f"{', '.join(formatted_points)}")
+        else:
+            formatted_point = "; ".join(map(lambda x: str(round(x, 6)), min_point))
+            self.result_point.setText(f"({formatted_point})")
         self.result_point.show()
 
         if symmetry is not None:
