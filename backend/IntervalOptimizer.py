@@ -137,10 +137,14 @@ class IntervalOptimizer:
                         else:
                             L.insert(0, f)
             
+            # if len(L) > 0: 
+            #     f_min_high = min(f_min_high, func(self.__mid(L[0][0])))
+            #     f_min_low = L[0][1].start.evalf() #f_low
+            #     glob_history.append(f_min_high-f_min_low)
+
             if len(L) > 0: 
                 f_min_high = min(f_min_high, func(self.__mid(L[0][0])))
-                f_min_low = L[0][1].start.evalf() #f_low
-                glob_history.append(f_min_high-f_min_low)
+                glob_history.append(f_min_high)
 
             L_new = deque()
             for i in range(len(L)):
