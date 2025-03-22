@@ -93,9 +93,9 @@ class Optimizator:
         x_min, loc_history = loc_method(f, x_min, x_low, x_high, *args)
         return (x_min, glob_history, loc_history, None)
     
-    def full_interval_algorithm(f, n_vars: int, x_low: list, x_high: list, eps: float, loc_method, *args):
+    def full_interval_algorithm(f, n_vars: int, x_low: list, x_high: list, eps: float, n_mins: int, loc_method, *args):
         ia = IntervalOptimizer(eps)
-        x_min, glob_history = ia.full_optimize(f, n_vars, x_low, x_high)
+        x_min, glob_history = ia.full_optimize(f, n_vars, x_low, x_high, eps, n_mins)
         x_min, loc_history = loc_method(f, x_min, x_low, x_high, *args)
         return (x_min, glob_history, loc_history, None)
 
